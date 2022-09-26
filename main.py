@@ -23,7 +23,6 @@ class Code:
         self.inside_return = False; self.inside_custom_ternary = False
 
         lines = self.code.splitlines()
-        line1, lines = lines[0], unindent("\n".join(lines[1:])).splitlines()
 
         self.imports = [self.parse_import(line) for line in lines if '_import' in line]
         self.code = "\n".join([line for line in lines if not '_import' in line])
