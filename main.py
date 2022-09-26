@@ -394,7 +394,9 @@ class Code:
             AugAssign: lambda e: self.process_assign(e, augment=True),
             Tuple: lambda e: self.parse_tuple(e),
 
-            Dict: lambda e: self.parse_dict(e)
+            Dict: lambda e: self.parse_dict(e),
+
+            Pass: lambda e: ''
         }
         s = case_switch.get(e_type, lambda e: self.throw(f"NOT YET IMPLEMENTED: {e_type}"))(e)
         # end_statement = self.end_statement if e_type in [Constant] else ""
