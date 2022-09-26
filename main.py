@@ -32,7 +32,6 @@ class Code:
 
         # Currently placed after IF statements and ASSIGNS... #
         self.eos = ';'
-        self.semi_colon_cheatcode = True
 
         self.config = config
         self.react = self.config.react
@@ -70,24 +69,12 @@ class Code:
 
         for node in self.ast.body:
             s += self.process_statement(node)# + ";"
-            end = self.config.end_statement.rstrip()
-            end = ";"
-            if not s.endswith(end):
-                # TODO: Fix this...
-                # s += self.end_statement
-                if self.semi_colon_cheatcode: s = s.replace(';;', ';')
-                if self.semi_colon_cheatcode: s = s.replace('; ;', ';')
-                s += "\n"
         opts = dict()
         if linting_options:
             opts.update(linting_options)
         if self.react:
             opts.update(e4x=True)
-        s = s.replace(';;', ';')
-        return beautify(self.mega_cheats(s), opts=opts)
-
-    def mega_cheats(self, s: str):
-        return s.replace(';)', ')')
+        return beautify(s, opts=opts)
 
     def process_left(self, left):
         # Kept as separate functions just in case you need to process them differently...
@@ -364,7 +351,7 @@ class Code:
         # print(c)
         # i = input('do breakpoint?')
         # if i == 'y': breakpoint()
-        return f"{c}" if self.direct_parent[0] in ['JoinedStr', 'lambda'] else f"{c}{self.eos}"
+        return f"{c}" if self.direct_parent[0] in ['JoinedStr', 'lambda'] else c#f"{c}{self.eos}"
 
     @pre_hook_wrapper
     @post_hook_wrapper
@@ -500,12 +487,7 @@ class Code:
     @pre_hook_wrapper
     @post_hook_wrapper
     def parse_body(self, body):
-        s = "".join(f"{self.process_statement(stmnt)}{self.eos}" for stmnt in body)
-        if self.semi_colon_cheatcode: s = s.replace(';\n;', ';')
-        if self.semi_colon_cheatcode: s = s.replace('; ;', ';')
-        if self.semi_colon_cheatcode: s = s.replace(';;', ';')
-        if self.semi_colon_cheatcode: s = s.replace('; ;', ';')
-        if self.semi_colon_cheatcode: s = s.replace(';;', ';')
+        s = "".join(f"{self.process_statement(stmnt)}{''}" for stmnt in body)#self.eos
         return s
 
     def parse_function(self, func):
