@@ -61,6 +61,7 @@ OR = '||'
 NOT = 'not'
 
 NEW_LINE = "\n"
+N, AND = '\n', '&&'
 
 
 ## TODO: Dealing with '==' vs '==='...

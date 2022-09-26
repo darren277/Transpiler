@@ -6,7 +6,7 @@ from utils import *
 from parsetools import unindent
 from jsbeautifier import beautify
 import inspect
-N, AND = '\n', '&&'
+
 self_closing_tags = ['route']
 
 class Code:
@@ -39,7 +39,7 @@ class Code:
         self.react = self.config.react
 
         self.log_file = None
-        self.log_file = "D:/testing/tmp/transpiler.log"
+        self.log_file = config.log_file
 
     def pre_hook(self, loc):
         func_name = loc['func'].__name__
@@ -537,13 +537,4 @@ class Code:
 
     def throw(self, e: str):
         raise Exception(e)
-
-
-
-## app_js = Code(App_js)
-## s = app_js.transpile()
-
-# print(s)
-
-
 
