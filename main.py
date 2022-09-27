@@ -65,16 +65,23 @@ class Code:
         self.import_lines.append(f"import {components} from {source};")
 
     def transpile(self, linting_options: dict = None):
-        s = ""
-
-        for node in self.ast.body:
-            s += self.process_statement(node)# + ";"
+        s = self.process_body(self.ast.body)
         opts = dict()
         if linting_options:
             opts.update(linting_options)
         if self.react:
             opts.update(e4x=True)
         return beautify(s, opts=opts)
+
+    @pre_hook_wrapper
+    @post_hook_wrapper
+    def process_body(self, body):
+        s = ''
+        for node in body:
+            s += self.process_statement(node)# + ";"
+            if len(s) > 0:
+                s += ';\n'
+        return s
 
     def process_left(self, left):
         # Kept as separate functions just in case you need to process them differently...
@@ -329,10 +336,10 @@ class Code:
         targets = ", ".join([self.process_target(t) for t in e.targets]) if not augment else self.process_statement(e.target)
         val = self.process_statement(e.value)
         if 'this' in targets:
-            return f"{targets} {augment_string}= {val}{self.eos}\n"
+            return f"{targets} {augment_string}= {val}"
         else:
-            if augment or targets.strip() in self.config.assign_special_cases: return f"{targets} {augment_string}= {val}{self.eos}\n"
-            else: return f"{self.config.assign} {targets} {augment_string}= {val}{self.eos}\n"
+            if augment or targets.strip() in self.config.assign_special_cases: return f"{targets} {augment_string}= {val}"
+            else: return f"{self.config.assign} {targets} {augment_string}= {val}"
 
     def process_subscript(self, e):
         try:
@@ -431,10 +438,10 @@ class Code:
         yo = N.join([self.process_statement(exp) for exp in e.body]) if type(e.body) == list else self.process_statement(e.body)
         self.direct_parent = ('conditional', None)
         if type(e.test) == Name:
-            return f"if ({e.test.id}) {{{N + yo + N}}}{self.eos}"
+            return f"if ({e.test.id}) {{{N + yo + N}}}"
         else:
             # if type(e.test) != Compare: breakpoint()
-            return f"if ({self.process_compare(e.test) if type(e.test) == Compare else self.process_bool_op(e.test)}) {{{N + yo + N}}}{self.eos}"
+            return f"if ({self.process_compare(e.test) if type(e.test) == Compare else self.process_bool_op(e.test)}) {{{N + yo + N}}}"
 
     def process_bin_op(self, body, double_and=False, special_long_lambda_case=False):
         # operator = Add | Sub | Mult | MatMult | Div | Mod | Pow
@@ -448,7 +455,8 @@ class Code:
         left = f"({self.process_left(body.left)})" if type(body.left) == BinOp else self.process_left(body.left)
         right = f"({self.process_right(body.right)})" if type(body.right) == BinOp else self.process_left(body.right)
         if special_long_lambda_case and (op != '+') and (op != '-') and (op != '*') and (op != '/') and (op != '//'):
-            op = ";\n"
+            #op = ";\n"
+            op = ''
             return f"{left} {op} {right};"
         else:
             return f"{left} {op} {right}"
@@ -484,12 +492,6 @@ class Code:
             self.inside_custom_ternary = False
             return f"{arg1} ? {arg2} : {arg3}"
 
-    @pre_hook_wrapper
-    @post_hook_wrapper
-    def parse_body(self, body):
-        s = "".join(f"{self.process_statement(stmnt)}{''}" for stmnt in body)#self.eos
-        return s
-
     def parse_function(self, func):
         n_defaults = len(_defaults := func.args.defaults)
         _defaults = iter(_defaults)
@@ -501,8 +503,8 @@ class Code:
         func_name = 'constructor' if func.name == '__init__' else func.name
         func_prefix = '' if self.direct_parent[0] == 'cls' else 'function '
         self.direct_parent = ('func', func_name)
-        body = self.parse_body(func.body)
-        return f"{func_prefix}{func_name} ({arg_string}){returns} {{ {body} }}\n\n"
+        body = self.process_body(func.body)
+        return f"{func_prefix}{func_name} ({arg_string}){returns} {{ {body} }}"
 
     def process_funcdef_arg(self, a, default = None):
         hint = ': ' + self.process_statement(a.annotation) if a.annotation else ''
@@ -514,7 +516,7 @@ class Code:
     def process_cls(self, cls):
         #print(cls.name, cls.keywords, cls.bases[0].id)
         self.direct_parent = ('cls', cls.name)
-        body = self.parse_body(cls.body)
+        body = self.process_body(cls.body)
         inherits = ''
         return f"class {cls.name}{inherits} {{{body}}}"
 
