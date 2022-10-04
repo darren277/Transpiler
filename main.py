@@ -75,10 +75,10 @@ class Code:
 
     @pre_hook_wrapper
     @post_hook_wrapper
-    def process_body(self, body):
+    def process_body(self, body, cls: bool = False):
         s = ''
         for node in body:
-            s += self.process_statement(node)# + ";"
+            s += self.process_statement(node, cls=cls)# + ";"
             if len(s) > 0:
                 s += ';\n'
         return s
@@ -247,6 +247,9 @@ class Code:
         if function_name == 'type':
             return f'typeof {self.process_arg(call.args[0])}'
 
+        if function_name == 'print':
+            return f"console.log({', '.join([self.process_arg(arg) for arg in call.args])})"
+
         if function_name == 'PURE_STRING':
             return call.args[0].value
 
@@ -335,11 +338,12 @@ class Code:
         if self.config.debug: print("ASSIGN")
         targets = ", ".join([self.process_target(t) for t in e.targets]) if not augment else self.process_statement(e.target)
         val = self.process_statement(e.value)
+        new = 'new ' if type(e.value) == Call else ''
         if 'this' in targets:
-            return f"{targets} {augment_string}= {val}"
+            return f"{targets} {augment_string}= {new}{val}"
         else:
-            if augment or targets.strip() in self.config.assign_special_cases: return f"{targets} {augment_string}= {val}"
-            else: return f"{self.config.assign} {targets} {augment_string}= {val}"
+            if augment or targets.strip() in self.config.assign_special_cases: return f"{targets} {augment_string}= {new}{val}"
+            else: return f"{self.config.assign} {targets} {augment_string}= {new}{val}"
 
     def process_subscript(self, e):
         try:
@@ -362,12 +366,12 @@ class Code:
 
     @pre_hook_wrapper
     @post_hook_wrapper
-    def process_statement(self, statement):
+    def process_statement(self, statement, cls: bool = False):
         e = statement
         e_type = type(e)
         case_switch = {
             Assign: lambda e: self.process_assign(e),
-            FunctionDef: lambda e: self.parse_function(e),
+            FunctionDef: lambda e: self.parse_function(e, cls=cls),
             Expr: lambda e: self.process_statement(e.value),
             Call: lambda e: self.check_call(self.process_call(e)),
             Return: lambda e: self.parse_return(e), # noqa
@@ -457,7 +461,7 @@ class Code:
         if special_long_lambda_case and (op != '+') and (op != '-') and (op != '*') and (op != '/') and (op != '//'):
             #op = ";\n"
             op = ''
-            return f"{left} {op} {right};"
+            return f"{left} {op} {right}"
         else:
             return f"{left} {op} {right}"
 
@@ -492,16 +496,17 @@ class Code:
             self.inside_custom_ternary = False
             return f"{arg1} ? {arg2} : {arg3}"
 
-    def parse_function(self, func):
+    def parse_function(self, func, cls: bool = False):
         n_defaults = len(_defaults := func.args.defaults)
         _defaults = iter(_defaults)
-        n_args = len(func.args.args)
+        args = [arg for arg in func.args.args if arg.arg != 'self']
+        n_args = len(args)
         defaults = [next(_defaults) if i >= n_args-n_defaults else None for i in range(n_args)]
-        arg_string = ', '.join([self.process_funcdef_arg(arg, default) for arg, default in zip(func.args.args, defaults)])
+        arg_string = ', '.join([self.process_funcdef_arg(arg, default) for arg, default in zip(args, defaults)])
         returns = ' -> ' + self.process_statement(func.returns) if func.returns else ''
         ## TODO: decorators = "\n".join([f"@{self.process_statement(decorator)}" for decorator in func.decorator_list]) if func.decorator_list else ""
         func_name = 'constructor' if func.name == '__init__' else func.name
-        func_prefix = '' if self.direct_parent[0] == 'cls' else 'function '
+        func_prefix = '' if cls or self.direct_parent[0] == 'cls' else 'function '
         self.direct_parent = ('func', func_name)
         body = self.process_body(func.body)
         return f"{func_prefix}{func_name} ({arg_string}){returns} {{ {body} }}"
@@ -516,7 +521,7 @@ class Code:
     def process_cls(self, cls):
         #print(cls.name, cls.keywords, cls.bases[0].id)
         self.direct_parent = ('cls', cls.name)
-        body = self.process_body(cls.body)
+        body = self.process_body(cls.body, cls=True)
         inherits = ''
         return f"class {cls.name}{inherits} {{{body}}}"
 
