@@ -129,8 +129,6 @@ class Code:
             return self.process_bin_op(a)
         else:
             return case_switch.get(type(a), lambda a: self.throw(f"NOT YET IMPLEMENTED: {type(a)}"))(a)
-            # try: return self.process_statement(_arg)
-            # except: raise Exception(f"NOT YET IMPLEMENTED: {type(_arg)}... ALSO TRIED PROCESS_STATEMENT AS BACKUP...")
 
     def process_bool_op(self, arg):
         if type(arg.op) == Or:
@@ -161,13 +159,10 @@ class Code:
         return self.process_attribute_call(call, s=s)
 
     def process_attribute_call(self, call, s: str = ""):
-        ## return self.process_attribute_call_debug(call, s=s)
-        ## if type(call) == JoinedStr: breakpoint()
         try:
             call_func = call.func
         except:
-            print("You're passing something in that is not an actual call... check your if else chain directly below...")
-            breakpoint()
+            raise Exception("You're passing something in that is not an actual call... check your if else chain directly below...")
         if type(call.func) == Attribute:
             if type(call.func.value) == Name:
                 s = call.func.value.id + s
@@ -181,13 +176,11 @@ class Code:
                 print("Yes, you can chain functions to lists in JS.")
                 s = self.parse_list(call.func.value) + s
             else:
-                ## input(type(call.func.value))
                 ## NOTE: You should not be passing an attribute to the following function...
                 ## if type(call.func.value) == Attribute: breakpoint()
                 s = self.process_attribute_call(call.func.value, s) + s
         elif type(call.func) == Call:
-            print("Hmmm....")
-            #### breakpoint()
+            raise Exception("Hmmm....")
         last_call = self.process_named_call(call)
         s += last_call if (type(call.func) == Name) or (type(call.func) == Call) else "." + last_call
         if s.startswith('.'):
@@ -198,7 +191,6 @@ class Code:
         ## TODO: REFACTOR THIS... ##
         content = False
         if type(call.func) == Call:
-            if self.config.debug: print("Case of nameless callback... e.g.: parentId(parentId)(data)"); print(call.func.func.attr)
             args = N.join([self.process_arg(arg) for arg in call.args])
             return f"{self.process_call(call.func).rstrip()}({args})"
         else:
@@ -245,9 +237,8 @@ class Code:
             kwargs_string += ', '
 
         if self.inside_return and ((function_name.lower() in ['div', 'ul', 'ol', 'li', 'p', 'route']) or (function_name in self.imported_components)):
-            print("HTML TAG CASE or IMPORTED REACT COMPONENT CASE")
+            # HTML TAG CASE or IMPORTED REACT COMPONENT CASE
             close1, close2 = ('/', '') if function_name.lower() in self_closing_tags else ('', f'</{function_name}>')
-            #breakpoint()
             if content:
                 actual_contents = [kw.value for kw in kwargs if kw.arg == 'content'][0]
                 kwargs_string += ", ".join([f"{kw.arg}={self.process_arg(kw.value)}" for kw in kwargs if not kw.arg == 'content'])
@@ -331,11 +322,7 @@ class Code:
         return e.id
 
     def check_call(self, c):
-        ## USEFUL TRICK FOR DEBUGGING... ##
-        # print(c)
-        # i = input('do breakpoint?')
-        # if i == 'y': breakpoint()
-        return f"{c}" if self.direct_parent[0] in ['JoinedStr', 'lambda'] else c#f"{c}{self.eos}"
+        return f"{c}" if self.direct_parent[0] in ['JoinedStr', 'lambda'] else c
 
     @pre_hook_wrapper
     @post_hook_wrapper
@@ -370,7 +357,6 @@ class Code:
             Pass: lambda e: ''
         }
         s = case_switch.get(e_type, lambda e: self.throw(f"NOT YET IMPLEMENTED: {e_type}"))(e)
-        # end_statement = self.end_statement if e_type in [Constant] else ""
         end_statement = ""
         if len(s) == 0:
             return ""
@@ -381,13 +367,8 @@ class Code:
 
     def process_call(self, c):
         assert type(c) == Call
-        ## breakpoint()
-        # input(c)
-        ## breakpoint()
         if type(c) == JoinedStr: breakpoint()
         if type(c.func) == Call:
-            print("THIS AN UNNAMED FUNCTION CALL (e.g.: padding(3)(d3.hierarchy(data)))")
-            print("OR DOES THIS HAVE SOMETHING TO DO WITH IT BEING AN ARGUMENT WITH ATTRIBUTES AND CALLS AND SO ON...???")
             return self.process_chained_call(c)
         return self.process_attribute_call(c) if type(c.func) == Attribute else self.process_named_call(c)
 
@@ -417,14 +398,12 @@ class Code:
         if type(e.test) == Name:
             return f"if ({e.test.id}) {{{N + yo + N}}}"
         else:
-            # if type(e.test) != Compare: breakpoint()
             return f"if ({self.process_compare(e.test) if type(e.test) == Compare else self.process_bool_op(e.test)}) {{{N + yo + N}}}"
 
     def process_bin_op(self, body, double_and=False, special_long_lambda_case=False):
         # operator = Add | Sub | Mult | MatMult | Div | Mod | Pow
         # LShift | RShift
         # BitOr | BitXor | BitAnd | FloorDiv
-        # print(body.left); print(body.op); print(body.right)
         if double_and:
             op = '&&'
         else:
@@ -432,7 +411,6 @@ class Code:
         left = f"({self.process_left(body.left)})" if type(body.left) == BinOp else self.process_left(body.left)
         right = f"({self.process_right(body.right)})" if type(body.right) == BinOp else self.process_left(body.right)
         if special_long_lambda_case and (op != '+') and (op != '-') and (op != '*') and (op != '/') and (op != '//'):
-            #op = ";\n"
             op = ''
             return f"{left} {op} {right}"
         else:
@@ -449,7 +427,6 @@ class Code:
             body_string = self.process_bin_op(body, special_long_lambda_case=True)
         else:
             body_string = self.process_statement(body)
-        # return f"({args_string}) => {{{body_string}}}" if len(args.args) > 1 else f"{args_string} => {{{body_string}}}"
         return f"{args_string} => {body_string}" if len(args.args) == 1 else f"({args_string}) => {body_string}"
 
     def process_joined_string(self, body):
@@ -460,7 +437,8 @@ class Code:
         return f"`{s}`"
 
     def process_ternary(self, t):
-        print("TERNARY!")
+        # Note: this is for my special ternary function I used to use until I became comfortable with the concept in both Python and JS
+        # TODO: Process ACTUAL Python ternary operators like x if y else z
         if len(t.args) != 3:
             raise Exception("TERNARY BROKE")
         else:
@@ -492,7 +470,6 @@ class Code:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_cls(self, cls):
-        #print(cls.name, cls.keywords, cls.bases[0].id)
         self.direct_parent = ('cls', cls.name)
         body = self.process_body(cls.body, cls=True)
         inherits = ''
