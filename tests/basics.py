@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.append(os.getcwd())
+
 from main import Code
 
 js = '''
@@ -37,10 +41,10 @@ print(s)
 
 import subprocess
 
-with open('testout/scripts/test.js', 'w') as f:
+with open('tests/testout/scripts/test.js', 'w') as f:
     f.write(s)
 
-p = subprocess.Popen(['node', 'testout/scripts/test.js'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+p = subprocess.Popen(['node', 'tests/testout/scripts/test.js'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 out = p.stdout.read()
 print(out)
 err = p.stderr.read()
