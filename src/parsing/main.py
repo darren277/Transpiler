@@ -229,6 +229,27 @@ class Visitor:
         }
         return case_switch.get(type(t), lambda t: self.throw(f"NOT YET IMPLEMENTED: {type(t)}"))(t)
 
+    def process_for_loop(self, f):
+        # TODO: orelse = self.process_statement(f.orelse)
+        orelse = ''
+
+        _iter = f.iter
+        if _iter.func.id == 'range':
+            t = self.process_target(f.target)
+            if len(_iter.args) == 1:
+                arg1 = _iter.args[0]
+                return f"for (let {t} = 0; {t} < {self.process_arg(arg1)}; {t}++) {self.process_body(f.body)} {orelse}"
+            elif len(_iter.args) == 2:
+                arg1, arg2 = _iter.args
+                return f"for (let {t} = {self.process_arg(arg2)}; {t} < {self.process_arg(arg1)}; {t}++) {self.process_body(f.body)} {orelse}"
+            elif len(_iter.args) == 3:
+                arg1, arg2, arg3 = _iter.args
+                arg3 = self.process_arg(arg3)
+                direction = '+' if arg3 >= 0 else '-'
+                return f"for (let {t} = {self.process_arg(arg2)}; {t} {'<' if direction == '+' else '>'} {self.process_arg(arg1)}; {t}{direction}={arg3}) {self.process_body(f.body)} {orelse}"
+        else:
+            raise Exception("NOT YET IMPLEMENTED")
+
     @return_func
     def parse_return(self, r):
         ## NOTE: LOTS OF SPECIAL CASES FOR REACT... ##
@@ -306,6 +327,17 @@ class Visitor:
             Tuple: lambda e: self.parse_tuple(e),
 
             Dict: lambda e: self.parse_dict(e),
+            List: lambda e: self.parse_list(e),
+            Set: lambda e: self.parse_set(e),
+
+            For: lambda e: self.process_for_loop(e),
+
+            Try: lambda e: self.process_try(e),
+            ExceptHandler: lambda e: self.process_except(e),
+
+            ListComp: lambda e: self.process_list_comp(e),
+            DictComp: lambda e: self.process_dict_comp(e),
+            SetComp: lambda e: self.process_set_comp(e),
 
             Pass: lambda e: ''
         }
@@ -314,6 +346,42 @@ class Visitor:
         if len(s) == 0:
             return ""
         return f"{s}{end_statement}"
+
+    def process_list_comp(self, e):
+        if len(e.generators) > 1: raise Exception("TODO: Multiple generators in list comprehension...")
+        if len(e.generators[0].ifs): raise Exception("TODO: If statements in list comprehension...")
+        if e.generators[0].is_async: raise Exception("TODO: Async list comprehension...")
+        return f"[{self.process_statement(e.elt)} for {e.generators[0].target.id} in {self.process_statement(e.generators[0].iter)}]"
+
+    def process_dict_comp(self, e):
+        if len(e.generators) > 1: raise Exception("TODO: Multiple generators in dict comprehension...")
+        if len(e.generators[0].ifs): raise Exception("TODO: If statements in dict comprehension...")
+        if e.generators[0].is_async: raise Exception("TODO: Async dict comprehension...")
+        return f"{{ {self.process_statement(e.key)}: {self.process_statement(e.value)} for {e.generators[0].target.id} in {self.process_statement(e.generators[0].iter)} }}"
+
+    def process_set_comp(self, e):
+        if len(e.generators) > 1: raise Exception("TODO: Multiple generators in set comprehension...")
+        if len(e.generators[0].ifs): raise Exception("TODO: If statements in set comprehension...")
+        if e.generators[0].is_async: raise Exception("TODO: Async set comprehension...")
+        return f"{{ {self.process_statement(e.elt)} for {e.generators[0].target.id} in {self.process_statement(e.generators[0].iter)} }}"
+
+    def process_try(self, t):
+        try_block = self.process_body(t.body)
+        except_block = self.process_body(t.handlers)
+        if t.orelse:
+            raise Exception("TODO: Implement else block for try/except")
+            else_block = self.process_body(t.orelse)
+        if t.finalbody:
+            raise Exception("TODO: Implement finally block for try/except")
+            finally_block = self.process_body(t.finalbody)
+        return f"try {{{try_block}}} catch(e) {{{except_block}}}"
+
+    def process_except(self, e):
+        # TODO...
+        return f"console.log(e)"
+        print(e)
+        breakpoint()
+        print()
 
     def process_while(self, e):
         return f"while ({self.process_compare(e.test)}) {{{N.join([self.process_statement(s) for s in e.body])}}}"
@@ -341,7 +409,8 @@ class Visitor:
         case_switch_dict = {
             USub: lambda e: f"-{self.process_statement(e.operand)}",
             Not: lambda e: f"!{self.process_statement(e.operand)}",
-            UAdd: lambda e: f"+{self.process_statement(e.operand)}"
+            UAdd: lambda e: f"+{self.process_statement(e.operand)}",
+            Invert: lambda e: f"~{self.process_statement(e.operand)}"
         }
         return case_switch_dict.get(type(e.op), lambda e: self.throw(f"NOT YET IMPLEMENTED: {type(e.op)}"))(e)
 
