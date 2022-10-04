@@ -63,7 +63,10 @@ def test_loaded_file_with_run(file_path: str):
     p = subprocess.Popen(['node', 'tests/testout/scripts/test.js'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out = p.stdout.read()
     print(out)
-    err = p.stderr.read()
+    err = p.stderr.read().decode()
+    if err:
+        exception = next(line for line in err.splitlines() if line.startswith('SyntaxError'))
+        raise Exception(exception)
     print(err)
 
 
