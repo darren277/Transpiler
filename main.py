@@ -199,28 +199,6 @@ class Code:
             breakpoint()
         return s
 
-    def process_attribute_call_debug(self, call, s: str = ""):
-        last_call = self.process_named_call(call)
-        if self.config.debug: print(f"NOW CHECKING IF {last_call} HAS A PREVIOUS CALL...")
-        t = type(call.func)
-        if t == Attribute:
-            if self.config.debug: print("THIS IS IN FACT AN ATTRIBUTE AND THEREFORE HAS AN ELEMENT..."); print("IS THAT PREVIOUS ELEMENT A CALL OR A NAME (indicating the end of our recursion)?")
-            t2 = call.func.value
-            if self.config.debug: print(type(t2))
-            if type(t2) == Name:
-                if self.config.debug: print(f"{t2} IS A NAME... NO RECURSION...")
-                s = t2.id + s
-            else:
-                if self.config.debug: print("NOW RECURSING...")
-                s = self.process_attribute_call(call.func.value, s) + s
-
-        if type(call.func) == Name:
-            s += last_call
-        else:
-            s += "." + last_call
-        if self.config.debug: print("S:", s)
-        return s
-
     def process_named_call(self, call):
         ## TODO: REFACTOR THIS... ##
         content = False
