@@ -2,13 +2,13 @@ import sys
 import os
 sys.path.append(os.getcwd())
 
-from main import Code
+from main import Main
 
 js = '''
 print("Hello World")
 '''
 
-js = Code(js)
+js = Main(js)
 
 s = js.transpile()
 print(s)
@@ -33,7 +33,7 @@ class Test:
 t = Test()
 t.test()
 '''
-js = Code(js)
+js = Main(js)
 
 s = js.transpile()
 print(s)
