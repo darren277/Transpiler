@@ -126,12 +126,7 @@ class Code:
         if type(a) == BinOp:
             if type(a.op) == Mult:
                 return self.process_bin_op(a)
-            print("WHY ARE WE DOING THIS DOUBLE AND THING??????")
-            print("WHY ARE WE DOING THIS DOUBLE AND THING??????")
-            print("WHY ARE WE DOING THIS DOUBLE AND THING??????")
-            print("WHY ARE WE DOING THIS DOUBLE AND THING??????")
-            print("WHY ARE WE DOING THIS DOUBLE AND THING??????")
-            return self.process_bin_op(a, double_and=True)
+            return self.process_bin_op(a)
         else:
             return case_switch.get(type(a), lambda a: self.throw(f"NOT YET IMPLEMENTED: {type(a)}"))(a)
             # try: return self.process_statement(_arg)
