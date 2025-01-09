@@ -45,7 +45,12 @@ operators = {
     Div: '/',
     Mult: '*',
     Add: '+',
-    Mod: '%'
+    Mod: '%',
+    Pow: '**',
+    FloorDiv: '//',
+    BitXor: '^',
+    LShift: '<<',
+    RShift: '>>'
 }
 
 compare_ops = {
@@ -54,6 +59,7 @@ compare_ops = {
     Gt: '>',
     GtE: '>=',
     Lt: '<',
+    LtE: '<=',
     Is: '==='
 }
 
