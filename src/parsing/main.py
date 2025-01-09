@@ -1,6 +1,7 @@
 """"""
 from _ast import *
 
+from src.typedefs import StatementType, BodyType, ClsType
 from utils import pre_hook_wrapper, post_hook_wrapper, compare_ops, return_func, NOT, OR, AND, operators, N
 from jsbeautifier import beautify
 
@@ -17,7 +18,7 @@ class Visitor:
 
         self.import_lines.append(f"import {components} from {source};")
 
-    def transpile(self, linting_options: dict = None):
+    def transpile(self, linting_options: dict = None) -> str:
         s = self.process_body(self.ast.body)
         opts = dict()
         if linting_options:
@@ -28,7 +29,7 @@ class Visitor:
 
     @pre_hook_wrapper
     @post_hook_wrapper
-    def process_body(self, body, cls: bool = False):
+    def process_body(self, body: BodyType, cls: bool = False) -> str:
         s = ''
         for node in body:
             s += self.process_statement(node, cls=cls)# + ";"
@@ -36,24 +37,24 @@ class Visitor:
                 s += ';\n'
         return s
 
-    def process_left(self, left):
+    def process_left(self, left) -> str:
         # Kept as separate functions just in case you need to process them differently...
         return self.process_side(left)
 
-    def process_right(self, right):
+    def process_right(self, right) -> str:
         # Kept as separate functions just in case you need to process them differently...
         return self.process_side(right)
 
-    def process_side(self, side):
+    def process_side(self, side) -> str:
         return self.process_bin_op(side) if type(side) == BinOp else self.process_statement(side)
 
-    def process_compare(self, cmp):
+    def process_compare(self, cmp) -> str:
         # cmpop = Eq | NotEq | Lt | LtE | Gt | GtE | Is | IsNot | In | NotIn
         left = self.process_left(cmp.left)
         right = self.process_right(cmp.comparators[0])
         return f"{left} {compare_ops[type(cmp.ops[0])]} {right}"
 
-    def process_arg(self, a):
+    def process_arg(self, a) -> str:
         case_switch = {
             arg: lambda a: self.process_funcdef_arg(a),
             Call: lambda a: self.process_call(a),
@@ -83,7 +84,7 @@ class Visitor:
         else:
             return case_switch.get(type(a), lambda a: self.throw(f"NOT YET IMPLEMENTED: {type(a)}"))(a)
 
-    def process_bool_op(self, arg):
+    def process_bool_op(self, arg) -> str:
         if type(arg.op) == Or:
             return f"{self.process_statement(arg.values[0])} {OR} {self.process_statement(arg.values[1])}"
         elif type(arg.op) == And:
@@ -94,7 +95,7 @@ class Visitor:
             breakpoint()
             raise Exception("BoolOp and ternary...")
 
-    def process_attribute(self, body, s: str = ""):
+    def process_attribute(self, body, s: str = "") -> str:
         if type(body.value) == Call:
             return self.process_attribute_call(body.value)
         last_attr = body.attr
@@ -108,10 +109,10 @@ class Visitor:
         s += "." + last_attr
         return s
 
-    def process_chained_call(self, call, s: str = ""):
+    def process_chained_call(self, call, s: str = "") -> str:
         return self.process_attribute_call(call, s=s)
 
-    def process_attribute_call(self, call, s: str = ""):
+    def process_attribute_call(self, call, s: str = "") -> str:
         try:
             call_func = call.func
         except:
@@ -140,7 +141,7 @@ class Visitor:
             breakpoint()
         return s
 
-    def process_named_call(self, call):
+    def process_named_call(self, call) -> str:
         ## TODO: REFACTOR THIS... ##
         content = False
         if type(call.func) == Call:
@@ -204,23 +205,23 @@ class Visitor:
         else:
             return f"{function_name}({args_string}{kwargs_string})"
 
-    def parse_dict(self, d):
+    def parse_dict(self, d) -> str:
         dict_body = self.config.dict_sep.join([f"{self.process_constant(key) if type(key) == Constant else key.id}: {self.process_arg(val)}" for key, val in zip(d.keys, d.values)])
         return f"{self.config.dict_wrapper[0]} {dict_body} {self.config.dict_wrapper[1]}"
 
-    def parse_set(self, s):
+    def parse_set(self, s) -> str:
         result = self.config.set_sep.join([self.process_arg(el) for el in s.elts])
         return f"new Set({self.config.set_wrapper[0]}{result}{self.config.set_wrapper[1]})"
 
-    def parse_list(self, l):
+    def parse_list(self, l) -> str:
         result = self.config.list_sep.join([self.process_statement(el) for el in l.elts])
         return f"[{result}]"
 
-    def parse_tuple(self, t):
+    def parse_tuple(self, t) -> str:
         result = ", ".join([self.process_arg(v) for v in t.elts])
         return f"{self.config.tuple_wrapper[0]}{result}{self.config.tuple_wrapper[1]}"
 
-    def process_target(self, t):
+    def process_target(self, t) -> str:
         case_switch = {
             Name: lambda t: self.process_name(t),
             Attribute: lambda t: self.process_attribute(t),
@@ -229,7 +230,7 @@ class Visitor:
         }
         return case_switch.get(type(t), lambda t: self.throw(f"NOT YET IMPLEMENTED: {type(t)}"))(t)
 
-    def process_for_loop(self, f):
+    def process_for_loop(self, f) -> str:
         # TODO: orelse = self.process_statement(f.orelse)
         orelse = ''
 
@@ -251,9 +252,9 @@ class Visitor:
             raise Exception("NOT YET IMPLEMENTED")
 
     @return_func
-    def parse_return(self, r):
+    def parse_return(self, r) -> str:
         ## NOTE: LOTS OF SPECIAL CASES FOR REACT... ##
-        if self.config.debug: print("RETURN")
+        if self.config.debug: print("RETURN", type(r), r)
         expr = r.value
         if type(expr) == Tuple:
             raise Exception(f"TODO: Return of {str(expr)}")
@@ -266,7 +267,7 @@ class Visitor:
 
     @pre_hook_wrapper
     @post_hook_wrapper
-    def process_assign(self, e, augment = False):
+    def process_assign(self, e, augment = False) -> str:
         augment_string = '+' if augment else ''
         # TODO: Handle reassignment to already declared consts/vars... #
         ## Note that this may involve some kind of DIY stack trace implementation to keep track of local variables... ##
@@ -283,7 +284,7 @@ class Visitor:
             if augment or targets.strip() in self.config.assign_special_cases: return f"{targets} {augment_string}= {new}{val}"
             else: return f"{self.config.assign} {targets} {augment_string}= {new}{val}"
 
-    def process_subscript(self, e):
+    def process_subscript(self, e) -> str:
         try:
             return f"{e.value.id}[{e.slice.id}]"
         except:
@@ -292,15 +293,15 @@ class Visitor:
             except:
                 raise Exception("NOT YET IMPLEMENTED FOR SUBSCRIPT...")
 
-    def process_name(self, e):
+    def process_name(self, e) -> str:
         return e.id
 
-    def check_call(self, c):
+    def check_call(self, c) -> str:
         return f"{c}" if self.direct_parent[0] in ['JoinedStr', 'lambda'] else c
 
     @pre_hook_wrapper
     @post_hook_wrapper
-    def process_statement(self, statement, cls: bool = False):
+    def process_statement(self, statement: StatementType, cls: bool = False) -> str:
         e = statement
         e_type = type(e)
         case_switch = {
@@ -347,25 +348,25 @@ class Visitor:
             return ""
         return f"{s}{end_statement}"
 
-    def process_list_comp(self, e):
+    def process_list_comp(self, e) -> str:
         if len(e.generators) > 1: raise Exception("TODO: Multiple generators in list comprehension...")
         if len(e.generators[0].ifs): raise Exception("TODO: If statements in list comprehension...")
         if e.generators[0].is_async: raise Exception("TODO: Async list comprehension...")
         return f"[{self.process_statement(e.elt)} for {e.generators[0].target.id} in {self.process_statement(e.generators[0].iter)}]"
 
-    def process_dict_comp(self, e):
+    def process_dict_comp(self, e) -> str:
         if len(e.generators) > 1: raise Exception("TODO: Multiple generators in dict comprehension...")
         if len(e.generators[0].ifs): raise Exception("TODO: If statements in dict comprehension...")
         if e.generators[0].is_async: raise Exception("TODO: Async dict comprehension...")
         return f"{{ {self.process_statement(e.key)}: {self.process_statement(e.value)} for {e.generators[0].target.id} in {self.process_statement(e.generators[0].iter)} }}"
 
-    def process_set_comp(self, e):
+    def process_set_comp(self, e) -> str:
         if len(e.generators) > 1: raise Exception("TODO: Multiple generators in set comprehension...")
         if len(e.generators[0].ifs): raise Exception("TODO: If statements in set comprehension...")
         if e.generators[0].is_async: raise Exception("TODO: Async set comprehension...")
         return f"{{ {self.process_statement(e.elt)} for {e.generators[0].target.id} in {self.process_statement(e.generators[0].iter)} }}"
 
-    def process_try(self, t):
+    def process_try(self, t) -> str:
         try_block = self.process_body(t.body)
         except_block = self.process_body(t.handlers)
         if t.orelse:
@@ -376,24 +377,24 @@ class Visitor:
             finally_block = self.process_body(t.finalbody)
         return f"try {{{try_block}}} catch(e) {{{except_block}}}"
 
-    def process_except(self, e):
+    def process_except(self, e) -> str:
         # TODO...
         return f"console.log(e)"
         print(e)
         breakpoint()
         print()
 
-    def process_while(self, e):
+    def process_while(self, e) -> str:
         return f"while ({self.process_compare(e.test)}) {{{N.join([self.process_statement(s) for s in e.body])}}}"
 
-    def process_call(self, c):
+    def process_call(self, c) -> str:
         assert type(c) == Call
         if type(c) == JoinedStr: breakpoint()
         if type(c.func) == Call:
             return self.process_chained_call(c)
         return self.process_attribute_call(c) if type(c.func) == Attribute else self.process_named_call(c)
 
-    def process_constant(self, e):
+    def process_constant(self, e) -> str:
         case_switch = {
             int: lambda val: f"{val}",
             str: lambda val: f"\"{val}\"",
@@ -404,7 +405,7 @@ class Visitor:
         val = e.value
         return case_switch.get(type(val), lambda val: self.throw(f"NOT YET IMPLEMENTED: {type(val)}"))(val)
 
-    def process_unary_op(self, e):
+    def process_unary_op(self, e) -> str:
         # unaryop = Invert | Not | UAdd | USub
         case_switch_dict = {
             USub: lambda e: f"-{self.process_statement(e.operand)}",
@@ -414,7 +415,7 @@ class Visitor:
         }
         return case_switch_dict.get(type(e.op), lambda e: self.throw(f"NOT YET IMPLEMENTED: {type(e.op)}"))(e)
 
-    def process_if(self, e):
+    def process_if(self, e) -> str:
         yo = N.join([self.process_statement(exp) for exp in e.body]) if type(e.body) == list else self.process_statement(e.body)
         self.direct_parent = ('conditional', None)
         if type(e.test) == Name:
@@ -422,7 +423,7 @@ class Visitor:
         else:
             return f"if ({self.process_compare(e.test) if type(e.test) == Compare else self.process_bool_op(e.test)}) {{{N + yo + N}}}"
 
-    def process_bin_op(self, body, double_and=False, special_long_lambda_case=False):
+    def process_bin_op(self, body, double_and=False, special_long_lambda_case=False) -> str:
         # operator = Add | Sub | Mult | MatMult | Div | Mod | Pow
         # LShift | RShift
         # BitOr | BitXor | BitAnd | FloorDiv
@@ -442,7 +443,7 @@ class Visitor:
 
     @pre_hook_wrapper
     @post_hook_wrapper
-    def parse_lambda(self, l):
+    def parse_lambda(self, l) -> str:
         args, body = l.args, l.body
         args_string = ', '.join([str(arg.arg) for arg in args.args]) if args.args else ''
         self.direct_parent = ('lambda', None)
@@ -453,14 +454,14 @@ class Visitor:
             body_string = self.process_statement(body)
         return f"{args_string} => {body_string}" if len(args.args) == 1 else f"({args_string}) => {body_string}"
 
-    def process_joined_string(self, body):
+    def process_joined_string(self, body) -> str:
         original_direct_parent = self.direct_parent[0], self.direct_parent[1]
         self.direct_parent = ('JoinedStr', None)
         s = "".join([val.value if type(val) == Constant else f"${{{self.process_statement(val.value)}}}" for val in body.values])
         self.direct_parent = original_direct_parent
         return f"`{s}`"
 
-    def process_ternary(self, t):
+    def process_ternary(self, t) -> str:
         # Note: this is for my special ternary function I used to use until I became comfortable with the concept in both Python and JS
         # TODO: Process ACTUAL Python ternary operators like x if y else z
         if len(t.args) != 3:
@@ -471,7 +472,7 @@ class Visitor:
             self.inside_custom_ternary = False
             return f"{arg1} ? {arg2} : {arg3}"
 
-    def parse_function(self, func, cls: bool = False):
+    def parse_function(self, func, cls: bool = False) -> str:
         n_defaults = len(_defaults := func.args.defaults)
         _defaults = iter(_defaults)
         args = [arg for arg in func.args.args if arg.arg != 'self']
@@ -486,14 +487,14 @@ class Visitor:
         body = self.process_body(func.body)
         return f"{func_prefix}{func_name} ({arg_string}){returns} {{ {body} }}"
 
-    def process_funcdef_arg(self, a, default = None):
+    def process_funcdef_arg(self, a, default = None) -> str:
         hint = ': ' + self.process_statement(a.annotation) if a.annotation else ''
         default = ' = ' + self.process_statement(default) if default else ''
         return f"{a.arg}{hint}{default}"
 
     @pre_hook_wrapper
     @post_hook_wrapper
-    def process_cls(self, cls):
+    def process_cls(self, cls: ClsType) -> str:
         self.direct_parent = ('cls', cls.name)
         body = self.process_body(cls.body, cls=True)
         inherits = ''
