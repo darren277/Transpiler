@@ -436,6 +436,8 @@ class Visitor:
             op = ''
             return f"{left} {op} {right}"
         else:
+            if op == '//':
+                return f"Math.floor({left} / {right})"
             return f"{left} {op} {right}"
 
     @pre_hook_wrapper
