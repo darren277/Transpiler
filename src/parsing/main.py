@@ -210,7 +210,7 @@ class Visitor:
 
     def parse_set(self, s):
         result = self.config.set_sep.join([self.process_arg(el) for el in s.elts])
-        return f"{self.config.set_wrapper[0]}{result}{self.config.set_wrapper[1]}"
+        return f"new Set({self.config.set_wrapper[0]}{result}{self.config.set_wrapper[1]})"
 
     def parse_list(self, l):
         result = self.config.list_sep.join([self.process_statement(el) for el in l.elts])
