@@ -70,13 +70,13 @@ class Visitor:
             # BinOp: lambda a: self.process_bin_op(a),
             Compare: lambda a: self.process_compare(a),
             BoolOp: lambda a: self.process_bool_op(a),
-            Lambda: lambda a: self.parse_lambda(a),
+            Lambda: lambda a: self.process_lambda(a),
             JoinedStr: lambda a: self.process_joined_string(a),
 
-            Tuple: lambda a: self.parse_tuple(a),
-            List: lambda a: self.parse_list(a),
-            Dict: lambda a: self.parse_dict(a),
-            Set: lambda a: self.parse_set(a),
+            Tuple: lambda a: self.process_tuple(a),
+            List: lambda a: self.process_list(a),
+            Dict: lambda a: self.process_dict(a),
+            Set: lambda a: self.process_set(a),
 
             Subscript: lambda a: self.process_subscript(a),
 
@@ -139,7 +139,7 @@ class Visitor:
                 s = self.process_subscript(call.func.value) + s
             elif type(call.func.value) == List:
                 print("Yes, you can chain functions to lists in JS.")
-                s = self.parse_list(call.func.value) + s
+                s = self.process_list(call.func.value) + s
             else:
                 ## NOTE: You should not be passing an attribute to the following function...
                 ## if type(call.func.value) == Attribute: breakpoint()
@@ -218,19 +218,19 @@ class Visitor:
         else:
             return f"{function_name}({args_string}{kwargs_string})"
 
-    def parse_dict(self, d) -> str:
+    def process_dict(self, d) -> str:
         dict_body = self.config.dict_sep.join([f"{self.process_constant(key) if type(key) == Constant else key.id}: {self.process_arg(val)}" for key, val in zip(d.keys, d.values)])
         return f"{self.config.dict_wrapper[0]} {dict_body} {self.config.dict_wrapper[1]}"
 
-    def parse_set(self, s) -> str:
+    def process_set(self, s) -> str:
         result = self.config.set_sep.join([self.process_arg(el) for el in s.elts])
         return f"new Set({self.config.set_wrapper[0]}{result}{self.config.set_wrapper[1]})"
 
-    def parse_list(self, l) -> str:
+    def process_list(self, l) -> str:
         result = self.config.list_sep.join([self.process_statement(el) for el in l.elts])
         return f"[{result}]"
 
-    def parse_tuple(self, t) -> str:
+    def process_tuple(self, t) -> str:
         result = ", ".join([self.process_arg(v) for v in t.elts])
         return f"{self.config.tuple_wrapper[0]}{result}{self.config.tuple_wrapper[1]}"
 
@@ -240,8 +240,8 @@ class Visitor:
         case_switch = {
             Name: lambda t: self.process_name(t),
             Attribute: lambda t: self.process_attribute(t),
-            Tuple: lambda t: self.parse_tuple(t),
-            List: lambda t: self.parse_list(t)
+            Tuple: lambda t: self.process_tuple(t),
+            List: lambda t: self.process_list(t)
         }
         return case_switch.get(type(t), lambda t: self.throw(f"NOT YET IMPLEMENTED: {type(t)}"))(t)
 
@@ -269,7 +269,7 @@ class Visitor:
             raise Exception("NOT YET IMPLEMENTED")
 
     @return_func
-    def parse_return(self, r) -> str:
+    def process_return(self, r) -> str:
         ## NOTE: LOTS OF SPECIAL CASES FOR REACT... ##
         if self.config.debug: print("RETURN", type(r), r)
         expr = r.value
@@ -323,10 +323,10 @@ class Visitor:
         e_type = type(e)
         case_switch = {
             Assign: lambda e: self.process_assign(e),
-            FunctionDef: lambda e: self.parse_function(e, cls=cls),
+            FunctionDef: lambda e: self.process_function(e, cls=cls),
             Expr: lambda e: self.process_statement(e.value),
             Call: lambda e: self.check_call(self.process_call(e)),
-            Return: lambda e: self.parse_return(e), # noqa
+            Return: lambda e: self.process_return(e), # noqa
             Name: lambda e: self.process_name(e),
             Attribute: lambda e: self.process_attribute(e),
             Constant: lambda e: self.process_constant(e),
@@ -336,17 +336,17 @@ class Visitor:
             BinOp: lambda e: self.process_bin_op(e),
             Compare: lambda e: self.process_compare(e),
             BoolOp: lambda e: self.process_bool_op(e),
-            Lambda: lambda e: self.parse_lambda(e),
+            Lambda: lambda e: self.process_lambda(e),
             JoinedStr: lambda e: self.process_joined_string(e),
             Subscript: lambda e: self.process_subscript(e),
             ClassDef: lambda e: self.process_cls(e),
             While: lambda e: self.process_while(e),
             AugAssign: lambda e: self.process_assign(e, augment=True),
-            Tuple: lambda e: self.parse_tuple(e),
+            Tuple: lambda e: self.process_tuple(e),
 
-            Dict: lambda e: self.parse_dict(e),
-            List: lambda e: self.parse_list(e),
-            Set: lambda e: self.parse_set(e),
+            Dict: lambda e: self.process_dict(e),
+            List: lambda e: self.process_list(e),
+            Set: lambda e: self.process_set(e),
 
             For: lambda e: self.process_for_loop(e),
 
@@ -478,7 +478,7 @@ class Visitor:
 
     @pre_hook_wrapper
     @post_hook_wrapper
-    def parse_lambda(self, l: ast.Lambda) -> str:
+    def process_lambda(self, l: ast.Lambda) -> str:
         args, body = l.args, l.body
         args_string = ', '.join([str(arg.arg) for arg in args.args]) if args.args else ''
         self.direct_parent = ('lambda', None)
@@ -514,7 +514,7 @@ class Visitor:
 
     @pre_hook_wrapper
     @post_hook_wrapper
-    def parse_function(self, func: ast.FunctionDef, cls: bool = False) -> str:
+    def process_function(self, func: ast.FunctionDef, cls: bool = False) -> str:
         n_defaults = len(_defaults := func.args.defaults)
         _defaults = iter(_defaults)
         args = [arg for arg in func.args.args if arg.arg != 'self']
