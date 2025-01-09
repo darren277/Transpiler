@@ -1,7 +1,8 @@
 """"""
+import ast
 from _ast import *
 
-from src.typedefs import StatementType, BodyType, ClsType
+from src.typedefs import StatementType, BodyType, ClsType, TargetType
 from utils import pre_hook_wrapper, post_hook_wrapper, compare_ops, return_func, NOT, OR, AND, operators, N
 from jsbeautifier import beautify
 
@@ -48,12 +49,16 @@ class Visitor:
     def process_side(self, side) -> str:
         return self.process_bin_op(side) if type(side) == BinOp else self.process_statement(side)
 
-    def process_compare(self, cmp) -> str:
+    @pre_hook_wrapper
+    @post_hook_wrapper
+    def process_compare(self, cmp: ast.Compare) -> str:
         # cmpop = Eq | NotEq | Lt | LtE | Gt | GtE | Is | IsNot | In | NotIn
         left = self.process_left(cmp.left)
         right = self.process_right(cmp.comparators[0])
         return f"{left} {compare_ops[type(cmp.ops[0])]} {right}"
 
+    @pre_hook_wrapper
+    @post_hook_wrapper
     def process_arg(self, a) -> str:
         case_switch = {
             arg: lambda a: self.process_funcdef_arg(a),
@@ -84,7 +89,9 @@ class Visitor:
         else:
             return case_switch.get(type(a), lambda a: self.throw(f"NOT YET IMPLEMENTED: {type(a)}"))(a)
 
-    def process_bool_op(self, arg) -> str:
+    @pre_hook_wrapper
+    @post_hook_wrapper
+    def process_bool_op(self, arg: ast.BoolOp) -> str:
         if type(arg.op) == Or:
             return f"{self.process_statement(arg.values[0])} {OR} {self.process_statement(arg.values[1])}"
         elif type(arg.op) == And:
@@ -95,7 +102,9 @@ class Visitor:
             breakpoint()
             raise Exception("BoolOp and ternary...")
 
-    def process_attribute(self, body, s: str = "") -> str:
+    @pre_hook_wrapper
+    @post_hook_wrapper
+    def process_attribute(self, body: ast.Attribute, s: str = "") -> str:
         if type(body.value) == Call:
             return self.process_attribute_call(body.value)
         last_attr = body.attr
@@ -112,7 +121,9 @@ class Visitor:
     def process_chained_call(self, call, s: str = "") -> str:
         return self.process_attribute_call(call, s=s)
 
-    def process_attribute_call(self, call, s: str = "") -> str:
+    @pre_hook_wrapper
+    @post_hook_wrapper
+    def process_attribute_call(self, call: ast.Call, s: str = "") -> str:
         try:
             call_func = call.func
         except:
@@ -141,7 +152,9 @@ class Visitor:
             breakpoint()
         return s
 
-    def process_named_call(self, call) -> str:
+    @pre_hook_wrapper
+    @post_hook_wrapper
+    def process_named_call(self, call: ast.Call) -> str:
         ## TODO: REFACTOR THIS... ##
         content = False
         if type(call.func) == Call:
@@ -221,7 +234,9 @@ class Visitor:
         result = ", ".join([self.process_arg(v) for v in t.elts])
         return f"{self.config.tuple_wrapper[0]}{result}{self.config.tuple_wrapper[1]}"
 
-    def process_target(self, t) -> str:
+    @pre_hook_wrapper
+    @post_hook_wrapper
+    def process_target(self, t: TargetType) -> str:
         case_switch = {
             Name: lambda t: self.process_name(t),
             Attribute: lambda t: self.process_attribute(t),
@@ -230,6 +245,8 @@ class Visitor:
         }
         return case_switch.get(type(t), lambda t: self.throw(f"NOT YET IMPLEMENTED: {type(t)}"))(t)
 
+    @pre_hook_wrapper
+    @post_hook_wrapper
     def process_for_loop(self, f) -> str:
         # TODO: orelse = self.process_statement(f.orelse)
         orelse = ''
@@ -366,7 +383,9 @@ class Visitor:
         if e.generators[0].is_async: raise Exception("TODO: Async set comprehension...")
         return f"{{ {self.process_statement(e.elt)} for {e.generators[0].target.id} in {self.process_statement(e.generators[0].iter)} }}"
 
-    def process_try(self, t) -> str:
+    @pre_hook_wrapper
+    @post_hook_wrapper
+    def process_try(self, t: ast.Try) -> str:
         try_block = self.process_body(t.body)
         except_block = self.process_body(t.handlers)
         if t.orelse:
@@ -387,14 +406,18 @@ class Visitor:
     def process_while(self, e) -> str:
         return f"while ({self.process_compare(e.test)}) {{{N.join([self.process_statement(s) for s in e.body])}}}"
 
-    def process_call(self, c) -> str:
+    @pre_hook_wrapper
+    @post_hook_wrapper
+    def process_call(self, c: ast.Call) -> str:
         assert type(c) == Call
         if type(c) == JoinedStr: breakpoint()
         if type(c.func) == Call:
             return self.process_chained_call(c)
         return self.process_attribute_call(c) if type(c.func) == Attribute else self.process_named_call(c)
 
-    def process_constant(self, e) -> str:
+    @pre_hook_wrapper
+    @post_hook_wrapper
+    def process_constant(self, e: ast.Constant) -> str:
         case_switch = {
             int: lambda val: f"{val}",
             str: lambda val: f"\"{val}\"",
@@ -405,7 +428,9 @@ class Visitor:
         val = e.value
         return case_switch.get(type(val), lambda val: self.throw(f"NOT YET IMPLEMENTED: {type(val)}"))(val)
 
-    def process_unary_op(self, e) -> str:
+    @pre_hook_wrapper
+    @post_hook_wrapper
+    def process_unary_op(self, e: ast.UnaryOp) -> str:
         # unaryop = Invert | Not | UAdd | USub
         case_switch_dict = {
             USub: lambda e: f"-{self.process_statement(e.operand)}",
@@ -415,7 +440,9 @@ class Visitor:
         }
         return case_switch_dict.get(type(e.op), lambda e: self.throw(f"NOT YET IMPLEMENTED: {type(e.op)}"))(e)
 
-    def process_if(self, e) -> str:
+    @pre_hook_wrapper
+    @post_hook_wrapper
+    def process_if(self, e: ast.If) -> str:
         yo = N.join([self.process_statement(exp) for exp in e.body]) if type(e.body) == list else self.process_statement(e.body)
         self.direct_parent = ('conditional', None)
         if type(e.test) == Name:
@@ -423,7 +450,9 @@ class Visitor:
         else:
             return f"if ({self.process_compare(e.test) if type(e.test) == Compare else self.process_bool_op(e.test)}) {{{N + yo + N}}}"
 
-    def process_bin_op(self, body, double_and=False, special_long_lambda_case=False) -> str:
+    @pre_hook_wrapper
+    @post_hook_wrapper
+    def process_bin_op(self, body: ast.BinOp, double_and: bool = False, special_long_lambda_case: bool = False) -> str:
         # operator = Add | Sub | Mult | MatMult | Div | Mod | Pow
         # LShift | RShift
         # BitOr | BitXor | BitAnd | FloorDiv
@@ -443,7 +472,7 @@ class Visitor:
 
     @pre_hook_wrapper
     @post_hook_wrapper
-    def parse_lambda(self, l) -> str:
+    def parse_lambda(self, l: ast.Lambda) -> str:
         args, body = l.args, l.body
         args_string = ', '.join([str(arg.arg) for arg in args.args]) if args.args else ''
         self.direct_parent = ('lambda', None)
@@ -472,7 +501,9 @@ class Visitor:
             self.inside_custom_ternary = False
             return f"{arg1} ? {arg2} : {arg3}"
 
-    def parse_function(self, func, cls: bool = False) -> str:
+    @pre_hook_wrapper
+    @post_hook_wrapper
+    def parse_function(self, func: ast.FunctionDef, cls: bool = False) -> str:
         n_defaults = len(_defaults := func.args.defaults)
         _defaults = iter(_defaults)
         args = [arg for arg in func.args.args if arg.arg != 'self']
