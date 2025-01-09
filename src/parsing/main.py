@@ -2,7 +2,7 @@
 import ast
 from _ast import *
 
-from src.typedefs import StatementType, BodyType, ClsType, TargetType
+from src.typedefs import StatementType, BodyType, ClsType, TargetType, ArgType
 from utils import pre_hook_wrapper, post_hook_wrapper, compare_ops, return_func, NOT, OR, AND, operators, N
 from jsbeautifier import beautify
 
@@ -59,7 +59,7 @@ class Visitor:
 
     @pre_hook_wrapper
     @post_hook_wrapper
-    def process_arg(self, a) -> str:
+    def process_arg(self, a: ArgType) -> str:
         case_switch = {
             arg: lambda a: self.process_funcdef_arg(a),
             Call: lambda a: self.process_call(a),
@@ -247,7 +247,7 @@ class Visitor:
 
     @pre_hook_wrapper
     @post_hook_wrapper
-    def process_for_loop(self, f) -> str:
+    def process_for_loop(self, f: ast.For) -> str:
         # TODO: orelse = self.process_statement(f.orelse)
         orelse = ''
 
@@ -396,13 +396,19 @@ class Visitor:
             finally_block = self.process_body(t.finalbody)
         return f"try {{{try_block}}} catch(e) {{{except_block}}}"
 
-    def process_except(self, e) -> str:
+    @pre_hook_wrapper
+    @post_hook_wrapper
+    def process_except(self, e: ast.ExceptHandler) -> str:
         # TODO...
+        raise Exception("TODO: Implement except block for try/except")
         return f"console.log(e)"
         print(e)
         breakpoint()
         print()
 
+    # TODO: STILL NEEDS TYPING...
+    @pre_hook_wrapper
+    @post_hook_wrapper
     def process_while(self, e) -> str:
         return f"while ({self.process_compare(e.test)}) {{{N.join([self.process_statement(s) for s in e.body])}}}"
 
@@ -483,13 +489,18 @@ class Visitor:
             body_string = self.process_statement(body)
         return f"{args_string} => {body_string}" if len(args.args) == 1 else f"({args_string}) => {body_string}"
 
-    def process_joined_string(self, body) -> str:
+    @pre_hook_wrapper
+    @post_hook_wrapper
+    def process_joined_string(self, body: ast.JoinedStr) -> str:
         original_direct_parent = self.direct_parent[0], self.direct_parent[1]
         self.direct_parent = ('JoinedStr', None)
         s = "".join([val.value if type(val) == Constant else f"${{{self.process_statement(val.value)}}}" for val in body.values])
         self.direct_parent = original_direct_parent
         return f"`{s}`"
 
+    # TODO: STILL NEEDS TYPING...
+    @pre_hook_wrapper
+    @post_hook_wrapper
     def process_ternary(self, t) -> str:
         # Note: this is for my special ternary function I used to use until I became comfortable with the concept in both Python and JS
         # TODO: Process ACTUAL Python ternary operators like x if y else z
@@ -518,7 +529,9 @@ class Visitor:
         body = self.process_body(func.body)
         return f"{func_prefix}{func_name} ({arg_string}){returns} {{ {body} }}"
 
-    def process_funcdef_arg(self, a, default = None) -> str:
+    @pre_hook_wrapper
+    @post_hook_wrapper
+    def process_funcdef_arg(self, a: ast.arg, default = None) -> str:
         hint = ': ' + self.process_statement(a.annotation) if a.annotation else ''
         default = ' = ' + self.process_statement(default) if default else ''
         return f"{a.arg}{hint}{default}"
