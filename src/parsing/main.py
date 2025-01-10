@@ -33,9 +33,9 @@ class Visitor:
     def process_body(self, body: BodyType, cls: bool = False) -> str:
         s = ''
         for node in body:
-            s += self.process_statement(node, cls=cls)# + ";"
+            s += self.process_statement(node, cls=cls)
             if len(s) > 0:
-                s += ';\n'
+                s += '\n'
         return s
 
     def process_left(self, left) -> str:
