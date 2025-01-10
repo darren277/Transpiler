@@ -390,7 +390,7 @@ class Visitor:
         if len(e.generators) > 1: raise Exception("TODO: Multiple generators in list comprehension...")
         if len(e.generators[0].ifs): raise Exception("TODO: If statements in list comprehension...")
         if e.generators[0].is_async: raise Exception("TODO: Async list comprehension...")
-        return f"[{self.process_statement(e.elt)} for {e.generators[0].target.id} in {self.process_statement(e.generators[0].iter)}]"
+        return f"({self.process_statement(e.elt)} for {e.generators[0].target.id} in {self.process_statement(e.generators[0].iter)})"
 
     def process_dict_comp(self, e) -> str:
         if len(e.generators) > 1: raise Exception("TODO: Multiple generators in dict comprehension...")

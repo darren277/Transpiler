@@ -366,11 +366,11 @@ a = 1 if 1 == 1 else 2
 # Comprehensions #
 
 ## List Comprehensions ##
-my_list = [i for i in range(0, 10)]
+##my_list = [i for i in range(0, 10)]
 
 ## Dictionary Comprehensions ##
-my_dict = {i: i for i in range(0, 10)}
+##my_dict2 = {i: i for i in range(0, 10)}
 
 ## Set Comprehensions ##
-my_set = {i for i in range(0, 10)}
+##my_set = {i for i in range(0, 10)}
 
