@@ -169,7 +169,7 @@ class Visitor:
             print("DICT CASE!!")
             try:
                 print("KEYWORDS:", call.keywords[0].arg, call.keywords[0].value)
-                return ""
+                raise Exception("This should be handled elsewhere for traditional assignments of dict() but this could occur in an edge case to be resolved later.")
             except IndexError:
                 raise Exception("EMPTY DICT???")
 
@@ -221,8 +221,20 @@ class Visitor:
         else:
             return f"{function_name}({args_string}{kwargs_string})"
 
+    def process_dict_key(self, key) -> str:
+        if type(key) == Constant:
+            return self.process_constant(key)
+        elif hasattr(key, 'id'):
+            return key.id
+        elif type(key) == str:
+            # NOTE: You have the option to wrap this in double quotes or even single quotes if desired.
+            # TODO: Consider if wrapping in double quotes should be the default unless otherwise specified?
+            return key
+        else:
+            breakpoint()
+
     def process_dict(self, d) -> str:
-        dict_body = self.config.dict_sep.join([f"{self.process_constant(key) if type(key) == Constant else key.id}: {self.process_arg(val)}" for key, val in zip(d.keys, d.values)])
+        dict_body = self.config.dict_sep.join([f"{self.process_dict_key(key)}: {self.process_arg(val)}" for key, val in zip(d.keys, d.values)])
         return f"{self.config.dict_wrapper[0]} {dict_body} {self.config.dict_wrapper[1]}"
 
     def process_set(self, s) -> str:
@@ -310,6 +322,16 @@ class Visitor:
                 assign = 'let'
                 new = ''
                 val = e.value.args[0].value
+            elif e.value.func.id == 'dict':
+                assign = self.config.assign
+                new = ''
+                kwargs = e.value.keywords
+                keys, values = zip(*[(keyword.arg, keyword.value) for keyword in kwargs])
+                actual_dict = ast.Dict(
+                    keys=keys,
+                    values=values
+                )
+                val = self.process_dict(actual_dict)
             else:
                 assign = self.config.assign
                 val = self.process_statement(e.value)
