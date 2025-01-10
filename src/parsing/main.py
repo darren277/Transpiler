@@ -109,11 +109,11 @@ class Visitor:
             return self.process_attribute_call(body.value)
         last_attr = body.attr
         if type(body.value) == Name:
-            if self.config.debug: print(f"{body.value} IS A NAME... NO RECURSION...")
+            #if self.config.debug: print(f"{body.value} IS A NAME... NO RECURSION...")
             v = body.value.id
             s = self.config._self + s if v == 'self' else v + s
         else:
-            if self.config.debug: print("NOW RECURSING...")
+            #if self.config.debug: print("NOW RECURSING...")
             s = self.process_attribute(body.value, s) + s
         s += "." + last_attr
         return s
@@ -271,7 +271,7 @@ class Visitor:
     @return_func
     def process_return(self, r) -> str:
         ## NOTE: LOTS OF SPECIAL CASES FOR REACT... ##
-        if self.config.debug: print("RETURN", type(r), r)
+        #if self.config.debug: print("RETURN", type(r), r)
         expr = r.value
         if type(expr) == Tuple:
             raise Exception(f"TODO: Return of {str(expr)}")
@@ -291,7 +291,7 @@ class Visitor:
         # TODO: Proper handling of semicolons at the end of statements... #
 
         ## TODO: Also, multiple assignments in same statement...
-        if self.config.debug: print("ASSIGN")
+        #if self.config.debug: print("ASSIGN")
         targets = ", ".join([self.process_target(t) for t in e.targets]) if not augment else self.process_statement(e.target)
         new = 'new ' if type(e.value) == Call else ''
         if type(e.value) == ast.Call:
