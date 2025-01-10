@@ -293,13 +293,31 @@ class Visitor:
         ## TODO: Also, multiple assignments in same statement...
         if self.config.debug: print("ASSIGN")
         targets = ", ".join([self.process_target(t) for t in e.targets]) if not augment else self.process_statement(e.target)
-        val = self.process_statement(e.value)
         new = 'new ' if type(e.value) == Call else ''
+        if type(e.value) == ast.Call:
+            if e.value.func.id == 'var':
+                assign = 'var'
+                new = ''
+                val = e.value.args[0].value
+            elif e.value.func.id == 'const':
+                assign = 'const'
+                new = ''
+                val = e.value.args[0].value
+            elif e.value.func.id == 'let':
+                assign = 'let'
+                new = ''
+                val = e.value.args[0].value
+            else:
+                assign = self.config.assign
+                val = self.process_statement(e.value)
+        else:
+            assign = self.config.assign
+            val = self.process_statement(e.value)
         if 'this' in targets:
             return f"{targets} {augment_string}= {new}{val}"
         else:
             if augment or targets.strip() in self.config.assign_special_cases: return f"{targets} {augment_string}= {new}{val}"
-            else: return f"{self.config.assign} {targets} {augment_string}= {new}{val}"
+            else: return f"{assign} {targets} {augment_string}= {new}{val}"
 
     def process_subscript(self, e) -> str:
         try:

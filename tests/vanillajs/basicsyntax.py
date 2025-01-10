@@ -243,6 +243,9 @@ for i in range(0, 10):
     print(i)
 
 ## While Loops ##
+# NOTE: To ensure that this is declared as a `var` and not a `const`, I changed the default assignment to `var`.
+# I also added a new set of special types, so you could alternatively set the default to `const` or even `let` and then override like so:
+# i = var(0)
 i = 0
 while i < 10:
     print(i)
@@ -341,6 +344,15 @@ f1 = lambda: "Hello World!"
 f2 = lambda x: x + 1
 
 f3 = lambda x, y: x + y
+
+
+
+my_special_var = var(25)
+my_special_const = const(25)
+my_special_let = let(25)
+
+# TODO: Multiple assignment...
+# e.g. x, y, z = var(20, 40, 60)
 
 
 
