@@ -2,7 +2,7 @@
 from settings import LOG_FILE
 
 class ASTConfig:
-    def __init__(self, assign: str = 'const', wrap_return: str = "()", tuples_in_curly_braces: bool = True, tuples_in_square_brackets: bool = False, debug: bool = False, log_file: str = LOG_FILE):
+    def __init__(self, assign: str = 'let', wrap_return: str = "()", tuples_in_curly_braces: bool = True, tuples_in_square_brackets: bool = False, debug: bool = False, log_file: str = LOG_FILE):
         self.assign = assign
         self.wrap_return = wrap_return
         self.tuples_in_curly_braces = tuples_in_curly_braces
@@ -10,8 +10,9 @@ class ASTConfig:
 
         self.debug = debug
 
-        self.assign = 'let'
         self.assign = 'const'
+        self.assign = 'var'
+        self.assign = 'let'
 
         self.wrap_return = "()"
         self.list_sep = ", "

@@ -139,9 +139,9 @@ def greater_than_or_equal_to(a, b):
 # Assignment #
 
 ## Simple assignment ##
-def assign(a, b):
-    a = b
-    return a
+def assign(a):
+    x = a
+    return x
 
 ## Simple addition assignment ##
 def add_assign(a, b):
@@ -243,6 +243,9 @@ for i in range(0, 10):
     print(i)
 
 ## While Loops ##
+# NOTE: To ensure that this is declared as a `var` and not a `const`, I changed the default assignment to `var`.
+# I also added a new set of special types, so you could alternatively set the default to `const` or even `let` and then override like so:
+# i = var(0)
 i = 0
 while i < 10:
     print(i)
@@ -293,7 +296,7 @@ class MyClass:
 ## Class with Inheritance ##
 class MyOtherClass(MyClass):
     def __init__(self):
-        super().__init__()
+        super(MyClass)#.__init__()
         self.my_other_var = "Hello World!"
 
     def my_other_function(self):
@@ -344,21 +347,33 @@ f3 = lambda x, y: x + y
 
 
 
+my_special_var = var(25)
+my_special_const = const(25)
+my_special_let = let(25)
+
+# TODO: Multiple assignment...
+# e.g. x, y, z = var(20, 40, 60)
+
+
+
 
 
 ## Ternary ##
 a = 1 if 1 == 1 else 2
+
+# or...
+a2 = ternary(1 == 1, 1, 2)
 
 
 
 # Comprehensions #
 
 ## List Comprehensions ##
-my_list = [i for i in range(0, 10)]
+##my_list = [i for i in range(0, 10)]
 
 ## Dictionary Comprehensions ##
-my_dict = {i: i for i in range(0, 10)}
+##my_dict2 = {i: i for i in range(0, 10)}
 
 ## Set Comprehensions ##
-my_set = {i for i in range(0, 10)}
+##my_set = {i for i in range(0, 10)}
 

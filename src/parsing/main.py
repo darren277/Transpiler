@@ -33,9 +33,9 @@ class Visitor:
     def process_body(self, body: BodyType, cls: bool = False) -> str:
         s = ''
         for node in body:
-            s += self.process_statement(node, cls=cls)# + ";"
+            s += self.process_statement(node, cls=cls)
             if len(s) > 0:
-                s += ';\n'
+                s += '\n'
         return s
 
     def process_left(self, left) -> str:
@@ -109,11 +109,11 @@ class Visitor:
             return self.process_attribute_call(body.value)
         last_attr = body.attr
         if type(body.value) == Name:
-            if self.config.debug: print(f"{body.value} IS A NAME... NO RECURSION...")
+            #if self.config.debug: print(f"{body.value} IS A NAME... NO RECURSION...")
             v = body.value.id
             s = self.config._self + s if v == 'self' else v + s
         else:
-            if self.config.debug: print("NOW RECURSING...")
+            #if self.config.debug: print("NOW RECURSING...")
             s = self.process_attribute(body.value, s) + s
         s += "." + last_attr
         return s
@@ -155,6 +155,15 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_named_call(self, call: ast.Call) -> str:
+        # FOR DEBUG PURPOSE, PRINT CONTENT OF PYTHON CODE AS A STRING...
+        if self.config.debug:
+            print("---------- START OF FUNCTION CALL ----------")
+            if type(call.func) == ast.Name:
+                print(call.func.id, call.args)
+            elif type(call.func) == ast.Attribute:
+                print(call.func.value, call.func.attr, call.args)
+            print(self.current_code_context)
+            print("---------- END OF FUNCTION CALL ----------")
         ## TODO: REFACTOR THIS... ##
         content = False
         if type(call.func) == Call:
@@ -169,12 +178,15 @@ class Visitor:
             print("DICT CASE!!")
             try:
                 print("KEYWORDS:", call.keywords[0].arg, call.keywords[0].value)
-                return ""
+                raise Exception("This should be handled elsewhere for traditional assignments of dict() but this could occur in an edge case to be resolved later.")
             except IndexError:
                 raise Exception("EMPTY DICT???")
 
+        if function_name == 'super':
+            return f"super({', '.join([self.process_arg(arg) for arg in call.args])})"
+
         if function_name == 'ternary':
-            return self.process_ternary(call)
+            return self.process_ternary(*call.args)
 
         if function_name == 'type':
             return f'typeof {self.process_arg(call.args[0])}'
@@ -218,8 +230,20 @@ class Visitor:
         else:
             return f"{function_name}({args_string}{kwargs_string})"
 
+    def process_dict_key(self, key) -> str:
+        if type(key) == Constant:
+            return self.process_constant(key)
+        elif hasattr(key, 'id'):
+            return key.id
+        elif type(key) == str:
+            # NOTE: You have the option to wrap this in double quotes or even single quotes if desired.
+            # TODO: Consider if wrapping in double quotes should be the default unless otherwise specified?
+            return key
+        else:
+            breakpoint()
+
     def process_dict(self, d) -> str:
-        dict_body = self.config.dict_sep.join([f"{self.process_constant(key) if type(key) == Constant else key.id}: {self.process_arg(val)}" for key, val in zip(d.keys, d.values)])
+        dict_body = self.config.dict_sep.join([f"{self.process_dict_key(key)}: {self.process_arg(val)}" for key, val in zip(d.keys, d.values)])
         return f"{self.config.dict_wrapper[0]} {dict_body} {self.config.dict_wrapper[1]}"
 
     def process_set(self, s) -> str:
@@ -271,7 +295,7 @@ class Visitor:
     @return_func
     def process_return(self, r) -> str:
         ## NOTE: LOTS OF SPECIAL CASES FOR REACT... ##
-        if self.config.debug: print("RETURN", type(r), r)
+        #if self.config.debug: print("RETURN", type(r), r)
         expr = r.value
         if type(expr) == Tuple:
             raise Exception(f"TODO: Return of {str(expr)}")
@@ -286,20 +310,57 @@ class Visitor:
     @post_hook_wrapper
     def process_assign(self, e, augment = False) -> str:
         augment_string = '+' if augment else ''
+        #print("CURRENT CODE CONTEXT")
+        #print(self.current_code_context)
+        #if 'my_special_var' in self.current_code_context: breakpoint()
         # TODO: Handle reassignment to already declared consts/vars... #
         ## Note that this may involve some kind of DIY stack trace implementation to keep track of local variables... ##
         # TODO: Proper handling of semicolons at the end of statements... #
 
         ## TODO: Also, multiple assignments in same statement...
-        if self.config.debug: print("ASSIGN")
+        #if self.config.debug: print("ASSIGN")
         targets = ", ".join([self.process_target(t) for t in e.targets]) if not augment else self.process_statement(e.target)
-        val = self.process_statement(e.value)
         new = 'new ' if type(e.value) == Call else ''
+        if type(e.value) == ast.Call:
+            if e.value.func.id == 'ternary':
+                new = ''
+            if e.value.func.id == 'var':
+                assign = 'var'
+                new = ''
+                val = e.value.args[0].value
+            elif e.value.func.id == 'const':
+                assign = 'const'
+                new = ''
+                val = e.value.args[0].value
+            elif e.value.func.id == 'let':
+                assign = 'let'
+                new = ''
+                val = e.value.args[0].value
+            elif e.value.func.id == 'dict':
+                assign = self.config.assign
+                new = ''
+                kwargs = e.value.keywords
+                keys, values = zip(*[(keyword.arg, keyword.value) for keyword in kwargs])
+                actual_dict = ast.Dict(
+                    keys=keys,
+                    values=values
+                )
+                val = self.process_dict(actual_dict)
+            else:
+                assign = self.config.assign
+                val = self.process_statement(e.value)
+        elif type(e.value) == ast.IfExp:
+            assign = self.config.assign
+            new = ''
+            val = self.process_ternary(e.value.test, e.value.body, e.value.orelse)
+        else:
+            assign = self.config.assign
+            val = self.process_statement(e.value)
         if 'this' in targets:
             return f"{targets} {augment_string}= {new}{val}"
         else:
             if augment or targets.strip() in self.config.assign_special_cases: return f"{targets} {augment_string}= {new}{val}"
-            else: return f"{self.config.assign} {targets} {augment_string}= {new}{val}"
+            else: return f"{assign} {targets} {augment_string}= {new}{val}"
 
     def process_subscript(self, e) -> str:
         try:
@@ -369,7 +430,7 @@ class Visitor:
         if len(e.generators) > 1: raise Exception("TODO: Multiple generators in list comprehension...")
         if len(e.generators[0].ifs): raise Exception("TODO: If statements in list comprehension...")
         if e.generators[0].is_async: raise Exception("TODO: Async list comprehension...")
-        return f"[{self.process_statement(e.elt)} for {e.generators[0].target.id} in {self.process_statement(e.generators[0].iter)}]"
+        return f"({self.process_statement(e.elt)} for {e.generators[0].target.id} in {self.process_statement(e.generators[0].iter)})"
 
     def process_dict_comp(self, e) -> str:
         if len(e.generators) > 1: raise Exception("TODO: Multiple generators in dict comprehension...")
@@ -399,12 +460,9 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_except(self, e: ast.ExceptHandler) -> str:
-        # TODO...
-        raise Exception("TODO: Implement except block for try/except")
-        return f"console.log(e)"
-        print(e)
-        breakpoint()
-        print()
+        # logger.warn...
+        print(f"WARNING: In JS you need to handle specific error types (i.e. {e.type.id}) internally inside the `catch` block.")
+        return self.process_body(e.body)
 
     # TODO: STILL NEEDS TYPING...
     @pre_hook_wrapper
@@ -501,14 +559,12 @@ class Visitor:
     # TODO: STILL NEEDS TYPING...
     @pre_hook_wrapper
     @post_hook_wrapper
-    def process_ternary(self, t) -> str:
-        # Note: this is for my special ternary function I used to use until I became comfortable with the concept in both Python and JS
-        # TODO: Process ACTUAL Python ternary operators like x if y else z
-        if len(t.args) != 3:
+    def process_ternary(self, *args) -> str:
+        if len(args) != 3:
             raise Exception("TERNARY BROKE")
         else:
             self.inside_custom_ternary = True
-            arg1, arg2, arg3 = [self.process_arg(arg) for arg in t.args]
+            arg1, arg2, arg3 = [self.process_arg(arg) for arg in args]
             self.inside_custom_ternary = False
             return f"{arg1} ? {arg2} : {arg3}"
 
@@ -539,7 +595,14 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_cls(self, cls: ClsType) -> str:
+        # Note that JavaScript cannot handle multiple inheritence in a straightforward manner.
+        # You would have to create a mixin (a separate class), which is a bit out of the scope of this project.
+        inherits = ''
+        if cls.bases:
+            if len(cls.bases) > 1:
+                raise Exception("JS does not handle multiple inheritence like this. You must define a mixin yourself.")
+            inherits += ' extends '
+            inherits += cls.bases[0].id
         self.direct_parent = ('cls', cls.name)
         body = self.process_body(cls.body, cls=True)
-        inherits = ''
         return f"class {cls.name}{inherits} {{{body}}}"
