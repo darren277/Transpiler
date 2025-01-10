@@ -186,7 +186,7 @@ class Visitor:
             return f"super({', '.join([self.process_arg(arg) for arg in call.args])})"
 
         if function_name == 'ternary':
-            return self.process_ternary(call)
+            return self.process_ternary(*call.args)
 
         if function_name == 'type':
             return f'typeof {self.process_arg(call.args[0])}'
@@ -322,6 +322,8 @@ class Visitor:
         targets = ", ".join([self.process_target(t) for t in e.targets]) if not augment else self.process_statement(e.target)
         new = 'new ' if type(e.value) == Call else ''
         if type(e.value) == ast.Call:
+            if e.value.func.id == 'ternary':
+                new = ''
             if e.value.func.id == 'var':
                 assign = 'var'
                 new = ''
@@ -347,6 +349,10 @@ class Visitor:
             else:
                 assign = self.config.assign
                 val = self.process_statement(e.value)
+        elif type(e.value) == ast.IfExp:
+            assign = self.config.assign
+            new = ''
+            val = self.process_ternary(e.value.test, e.value.body, e.value.orelse)
         else:
             assign = self.config.assign
             val = self.process_statement(e.value)
@@ -553,14 +559,12 @@ class Visitor:
     # TODO: STILL NEEDS TYPING...
     @pre_hook_wrapper
     @post_hook_wrapper
-    def process_ternary(self, t) -> str:
-        # Note: this is for my special ternary function I used to use until I became comfortable with the concept in both Python and JS
-        # TODO: Process ACTUAL Python ternary operators like x if y else z
-        if len(t.args) != 3:
+    def process_ternary(self, *args) -> str:
+        if len(args) != 3:
             raise Exception("TERNARY BROKE")
         else:
             self.inside_custom_ternary = True
-            arg1, arg2, arg3 = [self.process_arg(arg) for arg in t.args]
+            arg1, arg2, arg3 = [self.process_arg(arg) for arg in args]
             self.inside_custom_ternary = False
             return f"{arg1} ? {arg2} : {arg3}"
 

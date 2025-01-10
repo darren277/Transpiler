@@ -361,6 +361,9 @@ my_special_let = let(25)
 ## Ternary ##
 a = 1 if 1 == 1 else 2
 
+# or...
+a2 = ternary(1 == 1, 1, 2)
+
 
 
 # Comprehensions #
