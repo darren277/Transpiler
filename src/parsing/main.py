@@ -173,6 +173,9 @@ class Visitor:
             except IndexError:
                 raise Exception("EMPTY DICT???")
 
+        if function_name == 'super':
+            return f"super({', '.join([self.process_arg(arg) for arg in call.args])})"
+
         if function_name == 'ternary':
             return self.process_ternary(call)
 
@@ -557,7 +560,14 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_cls(self, cls: ClsType) -> str:
+        # Note that JavaScript cannot handle multiple inheritence in a straightforward manner.
+        # You would have to create a mixin (a separate class), which is a bit out of the scope of this project.
+        inherits = ''
+        if cls.bases:
+            if len(cls.bases) > 1:
+                raise Exception("JS does not handle multiple inheritence like this. You must define a mixin yourself.")
+            inherits += ' extends '
+            inherits += cls.bases[0].id
         self.direct_parent = ('cls', cls.name)
         body = self.process_body(cls.body, cls=True)
-        inherits = ''
         return f"class {cls.name}{inherits} {{{body}}}"

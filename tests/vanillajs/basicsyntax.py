@@ -296,7 +296,7 @@ class MyClass:
 ## Class with Inheritance ##
 class MyOtherClass(MyClass):
     def __init__(self):
-        super().__init__()
+        super(MyClass)#.__init__()
         self.my_other_var = "Hello World!"
 
     def my_other_function(self):
