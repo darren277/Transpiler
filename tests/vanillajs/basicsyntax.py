@@ -139,9 +139,9 @@ def greater_than_or_equal_to(a, b):
 # Assignment #
 
 ## Simple assignment ##
-def assign(a, b):
-    a = b
-    return a
+def assign(a):
+    x = a
+    return x
 
 ## Simple addition assignment ##
 def add_assign(a, b):
