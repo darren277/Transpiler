@@ -155,6 +155,15 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_named_call(self, call: ast.Call) -> str:
+        # FOR DEBUG PURPOSE, PRINT CONTENT OF PYTHON CODE AS A STRING...
+        if self.config.debug:
+            print("---------- START OF FUNCTION CALL ----------")
+            if type(call.func) == ast.Name:
+                print(call.func.id, call.args)
+            elif type(call.func) == ast.Attribute:
+                print(call.func.value, call.func.attr, call.args)
+            print(self.current_code_context)
+            print("---------- END OF FUNCTION CALL ----------")
         ## TODO: REFACTOR THIS... ##
         content = False
         if type(call.func) == Call:
@@ -301,6 +310,9 @@ class Visitor:
     @post_hook_wrapper
     def process_assign(self, e, augment = False) -> str:
         augment_string = '+' if augment else ''
+        #print("CURRENT CODE CONTEXT")
+        #print(self.current_code_context)
+        #if 'my_special_var' in self.current_code_context: breakpoint()
         # TODO: Handle reassignment to already declared consts/vars... #
         ## Note that this may involve some kind of DIY stack trace implementation to keep track of local variables... ##
         # TODO: Proper handling of semicolons at the end of statements... #
