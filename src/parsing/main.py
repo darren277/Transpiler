@@ -454,12 +454,9 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_except(self, e: ast.ExceptHandler) -> str:
-        # TODO...
-        raise Exception("TODO: Implement except block for try/except")
-        return f"console.log(e)"
-        print(e)
-        breakpoint()
-        print()
+        # logger.warn...
+        print(f"WARNING: In JS you need to handle specific error types (i.e. {e.type.id}) internally inside the `catch` block.")
+        return self.process_body(e.body)
 
     # TODO: STILL NEEDS TYPING...
     @pre_hook_wrapper
