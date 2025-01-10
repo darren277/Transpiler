@@ -131,6 +131,36 @@ class Hooks:
         #print("JOINED STRING TYPES:", set(joined_string_types))
         #print("FOR LOOP TYPES:", set(for_loop_types))
 
+        args = loc.get('args')
+        self.current_code_context = ""
+        if args:
+            self.print_code(args)
+
     def post_hook(self, loc):
         #print("POST HOOK", loc['func'].__name__, loc['args'][0], loc)
         ...
+
+    def print_code(self, args):
+        if not args:
+            print("Nothing here", type(args), args)
+            raise Exception("Guh?")
+        elif type(args) == list or type(args) == tuple:
+            for i in range(len(args)):
+                self.print_code(args[i])
+                return
+        print(type(args), args)
+        e = args
+        a, b, c, d = e.lineno, e.col_offset, e.end_col_offset, e.end_lineno
+        # print(f"LINE: {a}, COL: {b}, END COL: {c}, END LINE: {d}")
+        code_str = self.code
+        l = code_str.split('\n')[a - 1:d]
+        print("INCOMING CODE:")
+        for i, line in enumerate(l):
+            if i == 0:
+                line = f"[lineno: {a + i}]: {line[b:]}"
+                #print(line)
+            elif i == len(l) - 1:
+                line = f"[lineno: {a + i}]: {line[:c]}"
+                #print(line)
+            self.current_code_context += line
+        print("--------------")
