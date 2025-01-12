@@ -1,4 +1,5 @@
 """"""
+from special_types import var, const, let, ternary
 
 # Functions #
 
