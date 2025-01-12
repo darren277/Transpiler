@@ -318,7 +318,28 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_assign(self, e, augment = False) -> str:
-        augment_string = '+' if augment else ''
+        augment_string = ""
+        if augment:
+            op_type = type(e.op)
+            if op_type == ast.FloorDiv:
+                # Remember that `//` is singe line comment notation in JavaScript, so we'll have to process this expression into a regular floor division (Math.floor()).
+                # This *could* potentially lead to some very strange, albeit very rare, edge cases.
+                return f"{e.target.id} = Math.floor({e.target.id} / {self.process_statement(e.value)})"
+            augment_op_dict = {
+                ast.Add: lambda e: '+',
+                ast.Sub: lambda e: '-',
+                ast.Mult: lambda e: '*',
+                ast.Div: lambda e: '/',
+                ast.Mod: lambda e: '%',
+                ast.Pow: lambda e: '**',
+                ast.FloorDiv: lambda e: '//',
+                ast.BitAnd: lambda e: '&',
+                ast.BitOr: lambda e: '|',
+                ast.BitXor: lambda e: '^',
+                ast.LShift: lambda e: '<<',
+                ast.RShift: lambda e: '>>'
+            }
+            augment_string = augment_op_dict.get(op_type, lambda e: self.throw(f"NOT YET IMPLEMENTED: {op_type}"))(e.op)
         #print("CURRENT CODE CONTEXT")
         #print(self.current_code_context)
         #if 'my_special_var' in self.current_code_context: breakpoint()
