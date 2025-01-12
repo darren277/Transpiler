@@ -117,49 +117,49 @@ assert bitwise_right_shift(2, 2) == 0
 def boolean_and(a, b):
     return a and b
 
-assert boolean_and(2, 2) == 2
+assert boolean_and(True, True) == True
 
 
 ## Simple OR ##
 def boolean_or(a, b):
     return a or b
 
-assert boolean_or(2, 2) == 2
+assert boolean_or(True, True) == True
 
 
 ## Simple NOT ##
 def boolean_not(a):
     return not a
 
-assert boolean_not(2) == 0
+assert boolean_not(True) == False
 
 
 ## Simple XOR ##
 def boolean_xor(a, b):
     return a ^ b
 
-assert boolean_xor(2, 2) == 0
+assert boolean_xor(True, True) == False
 
 
 ## Simple NAND ##
 def boolean_nand(a, b):
     return not (a and b)
 
-assert boolean_nand(2, 2) == 0
+assert boolean_nand(True, True) == False
 
 
 ## Simple NOR ##
 def boolean_nor(a, b):
     return not (a or b)
 
-assert boolean_nor(2, 2) == 0
+assert boolean_nor(False, False) == True
 
 
 ## Simple XNOR ##
 def boolean_xnor(a, b):
     return not (a ^ b)
 
-assert boolean_xnor(2, 2) == 1
+assert boolean_xnor(True, False) == False
 
 
 # Comparison Operations #
