@@ -8,8 +8,17 @@ from jsbeautifier import beautify
 
 class Visitor:
     def parse_import(self, line: str):
-        line = line.replace('._import._from', '')
-        components, source = line.split(' = ')
+        # TODO: Why not actually parse these lines with the actual ast parser library, lol?
+        # You use it for literally everything else.
+        if line.startswith('from'):
+            # from special_types import var, const, let, ternary
+            actual_line = line.replace('from ', '').split(' import ')
+            source = actual_line[0]
+            components = actual_line[1]
+        else:
+            line = line.replace('._import._from', '')
+            components, source = line.split(' = ')
+
         separated_components = components.split(', ')
         source = source.replace('.', '/')
         source = f'"{source}"'
@@ -309,7 +318,28 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_assign(self, e, augment = False) -> str:
-        augment_string = '+' if augment else ''
+        augment_string = ""
+        if augment:
+            op_type = type(e.op)
+            if op_type == ast.FloorDiv:
+                # Remember that `//` is singe line comment notation in JavaScript, so we'll have to process this expression into a regular floor division (Math.floor()).
+                # This *could* potentially lead to some very strange, albeit very rare, edge cases.
+                return f"{e.target.id} = Math.floor({e.target.id} / {self.process_statement(e.value)})"
+            augment_op_dict = {
+                ast.Add: lambda e: '+',
+                ast.Sub: lambda e: '-',
+                ast.Mult: lambda e: '*',
+                ast.Div: lambda e: '/',
+                ast.Mod: lambda e: '%',
+                ast.Pow: lambda e: '**',
+                ast.FloorDiv: lambda e: '//',
+                ast.BitAnd: lambda e: '&',
+                ast.BitOr: lambda e: '|',
+                ast.BitXor: lambda e: '^',
+                ast.LShift: lambda e: '<<',
+                ast.RShift: lambda e: '>>'
+            }
+            augment_string = augment_op_dict.get(op_type, lambda e: self.throw(f"NOT YET IMPLEMENTED: {op_type}"))(e.op)
         #print("CURRENT CODE CONTEXT")
         #print(self.current_code_context)
         #if 'my_special_var' in self.current_code_context: breakpoint()
@@ -418,6 +448,8 @@ class Visitor:
             DictComp: lambda e: self.process_dict_comp(e),
             SetComp: lambda e: self.process_set_comp(e),
 
+            Assert: lambda e: self.process_assert(e),
+
             Pass: lambda e: ''
         }
         s = case_switch.get(e_type, lambda e: self.throw(f"NOT YET IMPLEMENTED: {e_type}"))(e)
@@ -425,6 +457,11 @@ class Visitor:
         if len(s) == 0:
             return ""
         return f"{s}{end_statement}"
+
+    @pre_hook_wrapper
+    @post_hook_wrapper
+    def process_assert(self, a: ast.Assert) -> str:
+        return f"console.assert({self.process_compare(a.test)}, '{self.process_compare(a.test)}')"
 
     def process_list_comp(self, e) -> str:
         if len(e.generators) > 1: raise Exception("TODO: Multiple generators in list comprehension...")
@@ -487,7 +524,8 @@ class Visitor:
             str: lambda val: f"\"{val}\"",
             type(...): lambda val: self.config._ellipsis,
             type(None): lambda val: self.config.none,
-            float: lambda val: f"{val}"
+            float: lambda val: f"{val}",
+            bool: lambda val: str(val).lower()
         }
         val = e.value
         return case_switch.get(type(val), lambda val: self.throw(f"NOT YET IMPLEMENTED: {type(val)}"))(val)

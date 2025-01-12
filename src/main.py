@@ -22,8 +22,8 @@ class Code:
 
         lines = self.code.splitlines()
 
-        self.imports = [self.parse_import(line) for line in lines if '_import' in line]
-        self.code = "\n".join([line for line in lines if not '_import' in line])
+        self.imports = [self.parse_import(line) for line in lines if ('_import' in line) or line.startswith('import') or line.startswith('from')]
+        self.code = "\n".join([line for line in lines if not (('_import' in line) or line.startswith('import') or line.startswith('from'))])
         self.ast = ast.parse(self.code)
 
         self.direct_parent = (None, None)
