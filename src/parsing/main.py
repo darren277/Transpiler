@@ -418,6 +418,8 @@ class Visitor:
             DictComp: lambda e: self.process_dict_comp(e),
             SetComp: lambda e: self.process_set_comp(e),
 
+            Assert: lambda e: self.process_assert(e),
+
             Pass: lambda e: ''
         }
         s = case_switch.get(e_type, lambda e: self.throw(f"NOT YET IMPLEMENTED: {e_type}"))(e)
@@ -425,6 +427,11 @@ class Visitor:
         if len(s) == 0:
             return ""
         return f"{s}{end_statement}"
+
+    @pre_hook_wrapper
+    @post_hook_wrapper
+    def process_assert(self, a: ast.Assert) -> str:
+        return f"console.assert({self.process_compare(a.test)}, '{self.process_compare(a.test)}')"
 
     def process_list_comp(self, e) -> str:
         if len(e.generators) > 1: raise Exception("TODO: Multiple generators in list comprehension...")
