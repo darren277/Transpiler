@@ -108,13 +108,7 @@ assert bitwise_left_shift(2, 2) == 8
 def bitwise_right_shift(a, b):
     return a >> b
 
-## Simple bitwise left rotate ##
-def bitwise_left_rotate(a, b):
-    return a.rotl(b)
-
-## Simple bitwise right rotate ##
-def bitwise_right_rotate(a, b):
-    return a.rotr(b)
+assert bitwise_right_shift(2, 2) == 0
 
 
 # Boolean Operations #
