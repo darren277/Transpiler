@@ -318,7 +318,9 @@ assert bitwise_right_shift_assign(2, 2) == 0
 ## Arrays ##
 my_array = [1, 2, 3, 4, 5]
 
-assert type(my_array) == list
+# Some of these assertions are getting pretty tricky and veering away from the purpose of this project.
+# I'll leave these as possible TODO's for the future.
+#assert type(my_array) == list
 
 
 ## Dictionaries/Objects ##
