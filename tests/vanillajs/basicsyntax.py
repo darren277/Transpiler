@@ -117,29 +117,49 @@ assert bitwise_right_shift(2, 2) == 0
 def boolean_and(a, b):
     return a and b
 
+assert boolean_and(2, 2) == 2
+
+
 ## Simple OR ##
 def boolean_or(a, b):
     return a or b
+
+assert boolean_or(2, 2) == 2
+
 
 ## Simple NOT ##
 def boolean_not(a):
     return not a
 
+assert boolean_not(2) == 0
+
+
 ## Simple XOR ##
 def boolean_xor(a, b):
     return a ^ b
+
+assert boolean_xor(2, 2) == 0
+
 
 ## Simple NAND ##
 def boolean_nand(a, b):
     return not (a and b)
 
+assert boolean_nand(2, 2) == 0
+
+
 ## Simple NOR ##
 def boolean_nor(a, b):
     return not (a or b)
 
+assert boolean_nor(2, 2) == 0
+
+
 ## Simple XNOR ##
 def boolean_xnor(a, b):
     return not (a ^ b)
+
+assert boolean_xnor(2, 2) == 1
 
 
 # Comparison Operations #
@@ -148,25 +168,42 @@ def boolean_xnor(a, b):
 def equality(a, b):
     return a == b
 
+assert equality(2, 2) == True
+
+
 ## Simple inequality ##
 def inequality(a, b):
     return a != b
+
+assert inequality(2, 2) == False
+
 
 ## Simple less than ##
 def less_than(a, b):
     return a < b
 
+assert less_than(2, 2) == False
+
+
 ## Simple less than or equal to ##
 def less_than_or_equal_to(a, b):
     return a <= b
+
+assert less_than_or_equal_to(2, 2) == True
+
 
 ## Simple greater than ##
 def greater_than(a, b):
     return a > b
 
+assert greater_than(2, 2) == False
+
+
 ## Simple greater than or equal to ##
 def greater_than_or_equal_to(a, b):
     return a >= b
+
+assert greater_than_or_equal_to(2, 2) == True
 
 
 # Assignment #
@@ -176,66 +213,103 @@ def assign(a):
     x = a
     return x
 
+assert assign(2) == 2
+
+
 ## Simple addition assignment ##
 def add_assign(a, b):
     a += b
     return a
+
+assert add_assign(2, 2) == 4
+
 
 ## Simple subtraction assignment ##
 def subtract_assign(a, b):
     a -= b
     return a
 
+assert subtract_assign(2, 2) == 0
+
+
 ## Simple multiplication assignment ##
 def multiply_assign(a, b):
     a *= b
     return a
+
+assert multiply_assign(2, 2) == 4
+
 
 ## Simple division assignment ##
 def divide_assign(a, b):
     a /= b
     return a
 
+assert divide_assign(2, 2) == 1
+
+
 ## Simple modulo assignment ##
 def modulo_assign(a, b):
     a %= b
     return a
+
+assert modulo_assign(2, 2) == 0
+
 
 ## Simple exponentiation assignment ##
 def exponentiate_assign(a, b):
     a **= b
     return a
 
+assert exponentiate_assign(2, 2) == 4
+
+
 ## Simple floor division assignment ##
 def floor_divide_assign(a, b):
     a //= b
     return a
+
+assert floor_divide_assign(2, 2) == 1
+
 
 ## Simple bitwise AND assignment ##
 def bitwise_and_assign(a, b):
     a &= b
     return a
 
+assert bitwise_and_assign(2, 2) == 2
+
+
 ## Simple bitwise OR assignment ##
 def bitwise_or_assign(a, b):
     a |= b
     return a
+
+assert bitwise_or_assign(2, 2) == 2
+
 
 ## Simple bitwise XOR assignment ##
 def bitwise_xor_assign(a, b):
     a ^= b
     return a
 
+assert bitwise_xor_assign(2, 2) == 0
+
+
 ## Simple bitwise left shift assignment ##
 def bitwise_left_shift_assign(a, b):
     a <<= b
     return a
+
+assert bitwise_left_shift_assign(2, 2) == 8
+
 
 ## Simple bitwise right shift assignment ##
 def bitwise_right_shift_assign(a, b):
     a >>= b
     return a
 
+assert bitwise_right_shift_assign(2, 2) == 0
 
 
 
@@ -243,6 +317,9 @@ def bitwise_right_shift_assign(a, b):
 
 ## Arrays ##
 my_array = [1, 2, 3, 4, 5]
+
+assert type(my_array) == list
+
 
 ## Dictionaries/Objects ##
 my_dict = {'key1': 'value1', 'key2': 'value2'}
