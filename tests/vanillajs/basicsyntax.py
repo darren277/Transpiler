@@ -22,49 +22,87 @@ def hello_there(name):
 def add(a, b):
     return a + b
 
+assert add(2, 2) == 4
+
+
 ## Simple subtraction ##
 def subtract(a, b):
     return a - b
+
+assert subtract(2, 2) == 0
+
 
 ## Simple multiplication ##
 def multiply(a, b):
     return a * b
 
+assert multiply(2, 2) == 4
+
+
 ## Simple division ##
 def divide(a, b):
     return a / b
+
+assert divide(2, 2) == 1
+
 
 ## Simple modulo ##
 def modulo(a, b):
     return a % b
 
+assert modulo(2, 2) == 0
+
+
 ## Simple exponentiation ##
 def exponentiate(a, b):
     return a ** b
+
+assert exponentiate(2, 2) == 4
+
 
 ## Simple floor division ##
 def floor_divide(a, b):
     return a // b
 
+assert floor_divide(2, 2) == 1
+
+
 ## Simple bitwise AND ##
 def bitwise_and(a, b):
     return a & b
+
+assert bitwise_and(2, 2) == 2
+
 
 ## Simple bitwise OR ##
 def bitwise_or(a, b):
     return a | b
 
+assert bitwise_or(2, 2) == 2
+
+
 ## Simple bitwise XOR ##
 def bitwise_xor(a, b):
     return a ^ b
 
+assert bitwise_xor(2, 2) == 0
+
+
 ## Simple bitwise NOT ##
 def bitwise_not(a):
+    #  2: 00000000 00000000 00000000 00000010
+    # -3: 11111111 11111111 11111111 11111101
     return ~a
+
+assert bitwise_not(2) == -3
+
 
 ## Simple bitwise left shift ##
 def bitwise_left_shift(a, b):
     return a << b
+
+assert bitwise_left_shift(2, 2) == 8
+
 
 ## Simple bitwise right shift ##
 def bitwise_right_shift(a, b):
