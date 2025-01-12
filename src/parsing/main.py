@@ -8,8 +8,17 @@ from jsbeautifier import beautify
 
 class Visitor:
     def parse_import(self, line: str):
-        line = line.replace('._import._from', '')
-        components, source = line.split(' = ')
+        # TODO: Why not actually parse these lines with the actual ast parser library, lol?
+        # You use it for literally everything else.
+        if line.startswith('from'):
+            # from special_types import var, const, let, ternary
+            actual_line = line.replace('from ', '').split(' import ')
+            source = actual_line[0]
+            components = actual_line[1]
+        else:
+            line = line.replace('._import._from', '')
+            components, source = line.split(' = ')
+
         separated_components = components.split(', ')
         source = source.replace('.', '/')
         source = f'"{source}"'
