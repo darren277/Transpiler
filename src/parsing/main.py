@@ -494,7 +494,8 @@ class Visitor:
             str: lambda val: f"\"{val}\"",
             type(...): lambda val: self.config._ellipsis,
             type(None): lambda val: self.config.none,
-            float: lambda val: f"{val}"
+            float: lambda val: f"{val}",
+            bool: lambda val: str(val).lower()
         }
         val = e.value
         return case_switch.get(type(val), lambda val: self.throw(f"NOT YET IMPLEMENTED: {type(val)}"))(val)
