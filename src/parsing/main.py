@@ -287,19 +287,21 @@ class Visitor:
         orelse = ''
 
         _iter = f.iter
-        if _iter.func.id == 'range':
+
+        if type(_iter) == Constant or _iter.func.id == 'range':
             t = self.process_target(f.target)
-            if len(_iter.args) == 1:
-                arg1 = _iter.args[0]
-                return f"for (let {t} = 0; {t} < {self.process_arg(arg1)}; {t}++) {self.process_body(f.body)} {orelse}"
+            if type(_iter) == Constant or len(_iter.args) == 1:
+                if type(_iter) == Constant: arg1 = _iter
+                else: arg1 = _iter.args[0]
+                return f"for (let {t} = 0; {t} < {self.process_arg(arg1)}; {t}++) {{{self.process_body(f.body)}}} {orelse}"
             elif len(_iter.args) == 2:
                 arg1, arg2 = _iter.args
-                return f"for (let {t} = {self.process_arg(arg2)}; {t} < {self.process_arg(arg1)}; {t}++) {self.process_body(f.body)} {orelse}"
+                return f"for (let {t} = {self.process_arg(arg2)}; {t} < {self.process_arg(arg1)}; {t}++) {{{self.process_body(f.body)}}} {orelse}"
             elif len(_iter.args) == 3:
                 arg1, arg2, arg3 = _iter.args
                 arg3 = self.process_arg(arg3)
                 direction = '+' if arg3 >= 0 else '-'
-                return f"for (let {t} = {self.process_arg(arg2)}; {t} {'<' if direction == '+' else '>'} {self.process_arg(arg1)}; {t}{direction}={arg3}) {self.process_body(f.body)} {orelse}"
+                return f"for (let {t} = {self.process_arg(arg2)}; {t} {'<' if direction == '+' else '>'} {self.process_arg(arg1)}; {t}{direction}={arg3}) {{{self.process_body(f.body)}}} {orelse}"
         else:
             raise Exception("NOT YET IMPLEMENTED")
 
