@@ -509,7 +509,8 @@ class Visitor:
     @post_hook_wrapper
     def process_except(self, e: ast.ExceptHandler) -> str:
         # logger.warn...
-        print(f"WARNING: In JS you need to handle specific error types (i.e. {e.type.id}) internally inside the `catch` block.")
+        if e.type:
+            print(f"WARNING: In JS you need to handle specific error types (i.e. {e.type.id}) internally inside the `catch` block.")
         return self.process_body(e.body)
 
     # TODO: STILL NEEDS TYPING...
