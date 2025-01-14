@@ -101,6 +101,8 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_bool_op(self, arg: ast.BoolOp) -> str:
+        if type(arg) == ast.Constant:
+            return self.process_arg(arg)
         if type(arg.op) == Or:
             return f"{self.process_statement(arg.values[0])} {OR} {self.process_statement(arg.values[1])}"
         elif type(arg.op) == And:
@@ -285,24 +287,32 @@ class Visitor:
         orelse = ''
 
         _iter = f.iter
-        if _iter.func.id == 'range':
+
+        if type(_iter) == Constant or _iter.func.id == 'range':
             t = self.process_target(f.target)
-            if len(_iter.args) == 1:
-                arg1 = _iter.args[0]
-                return f"for (let {t} = 0; {t} < {self.process_arg(arg1)}; {t}++) {self.process_body(f.body)} {orelse}"
+            if type(_iter) == Constant or len(_iter.args) == 1:
+                if type(_iter) == Constant: arg1 = _iter
+                else: arg1 = _iter.args[0]
+                return f"for (let {t} = 0; {t} < {self.process_arg(arg1)}; {t}++) {{{self.process_body(f.body)}}} {orelse}"
             elif len(_iter.args) == 2:
                 arg1, arg2 = _iter.args
-                return f"for (let {t} = {self.process_arg(arg2)}; {t} < {self.process_arg(arg1)}; {t}++) {self.process_body(f.body)} {orelse}"
+                return f"for (let {t} = {self.process_arg(arg2)}; {t} < {self.process_arg(arg1)}; {t}++) {{{self.process_body(f.body)}}} {orelse}"
             elif len(_iter.args) == 3:
                 arg1, arg2, arg3 = _iter.args
                 arg3 = self.process_arg(arg3)
                 direction = '+' if arg3 >= 0 else '-'
-                return f"for (let {t} = {self.process_arg(arg2)}; {t} {'<' if direction == '+' else '>'} {self.process_arg(arg1)}; {t}{direction}={arg3}) {self.process_body(f.body)} {orelse}"
+                return f"for (let {t} = {self.process_arg(arg2)}; {t} {'<' if direction == '+' else '>'} {self.process_arg(arg1)}; {t}{direction}={arg3}) {{{self.process_body(f.body)}}} {orelse}"
         else:
             raise Exception("NOT YET IMPLEMENTED")
 
     @return_func
     def process_return(self, r) -> str:
+        if not self.config.wrap_return:
+            wrap_return_left = ''
+            wrap_return_right = ''
+        else:
+            wrap_return_left = self.config.wrap_return[0]
+            wrap_return_right = self.config.wrap_return[1]
         ## NOTE: LOTS OF SPECIAL CASES FOR REACT... ##
         #if self.config.debug: print("RETURN", type(r), r)
         expr = r.value
@@ -313,7 +323,7 @@ class Visitor:
             expr = ""
         else:
             expr = self.process_statement(expr)
-        return f"return {self.config.wrap_return[0]}{expr}{self.config.wrap_return[1]}{self.config.end_statement}"
+        return f"return {wrap_return_left}{expr}{wrap_return_right}{self.config.end_statement}"
 
     @pre_hook_wrapper
     @post_hook_wrapper
@@ -486,19 +496,21 @@ class Visitor:
     def process_try(self, t: ast.Try) -> str:
         try_block = self.process_body(t.body)
         except_block = self.process_body(t.handlers)
+        finally_string = ""
         if t.orelse:
             raise Exception("TODO: Implement else block for try/except")
             else_block = self.process_body(t.orelse)
         if t.finalbody:
-            raise Exception("TODO: Implement finally block for try/except")
             finally_block = self.process_body(t.finalbody)
-        return f"try {{{try_block}}} catch(e) {{{except_block}}}"
+            finally_string = f"\nfinally {{{N+finally_block}}}"
+        return f"try {{{try_block}}}\ncatch (e) {{{except_block}}}" + finally_string
 
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_except(self, e: ast.ExceptHandler) -> str:
         # logger.warn...
-        print(f"WARNING: In JS you need to handle specific error types (i.e. {e.type.id}) internally inside the `catch` block.")
+        if e.type:
+            print(f"WARNING: In JS you need to handle specific error types (i.e. {e.type.id}) internally inside the `catch` block.")
         return self.process_body(e.body)
 
     # TODO: STILL NEEDS TYPING...
@@ -590,7 +602,7 @@ class Visitor:
     def process_joined_string(self, body: ast.JoinedStr) -> str:
         original_direct_parent = self.direct_parent[0], self.direct_parent[1]
         self.direct_parent = ('JoinedStr', None)
-        s = "".join([val.value if type(val) == Constant else f"${{{self.process_statement(val.value)}}}" for val in body.values])
+        s = "".join([val.value if type(val) == Constant else f"${{{val.id}}}" if type(val) == Name else f"${{{self.process_statement(val.value)}}}" for val in body.values])
         self.direct_parent = original_direct_parent
         return f"`{s}`"
 
@@ -640,7 +652,11 @@ class Visitor:
             if len(cls.bases) > 1:
                 raise Exception("JS does not handle multiple inheritence like this. You must define a mixin yourself.")
             inherits += ' extends '
-            inherits += cls.bases[0].id
+            try:
+                inherits += cls.bases[0].id
+            except AttributeError:
+                # cls.bases[0] is likely an ast.Attribute...
+                inherits += self.process_attribute(cls.bases[0])
         self.direct_parent = ('cls', cls.name)
         body = self.process_body(cls.body, cls=True)
         return f"class {cls.name}{inherits} {{{body}}}"
