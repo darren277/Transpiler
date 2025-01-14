@@ -307,6 +307,12 @@ class Visitor:
 
     @return_func
     def process_return(self, r) -> str:
+        if not self.config.wrap_return:
+            wrap_return_left = ''
+            wrap_return_right = ''
+        else:
+            wrap_return_left = self.config.wrap_return[0]
+            wrap_return_right = self.config.wrap_return[1]
         ## NOTE: LOTS OF SPECIAL CASES FOR REACT... ##
         #if self.config.debug: print("RETURN", type(r), r)
         expr = r.value
@@ -317,7 +323,7 @@ class Visitor:
             expr = ""
         else:
             expr = self.process_statement(expr)
-        return f"return {self.config.wrap_return[0]}{expr}{self.config.wrap_return[1]}{self.config.end_statement}"
+        return f"return {wrap_return_left}{expr}{wrap_return_right}{self.config.end_statement}"
 
     @pre_hook_wrapper
     @post_hook_wrapper
