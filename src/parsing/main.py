@@ -640,7 +640,11 @@ class Visitor:
             if len(cls.bases) > 1:
                 raise Exception("JS does not handle multiple inheritence like this. You must define a mixin yourself.")
             inherits += ' extends '
-            inherits += cls.bases[0].id
+            try:
+                inherits += cls.bases[0].id
+            except AttributeError:
+                # cls.bases[0] is likely an ast.Attribute...
+                inherits += self.process_attribute(cls.bases[0])
         self.direct_parent = ('cls', cls.name)
         body = self.process_body(cls.body, cls=True)
         return f"class {cls.name}{inherits} {{{body}}}"
