@@ -496,13 +496,14 @@ class Visitor:
     def process_try(self, t: ast.Try) -> str:
         try_block = self.process_body(t.body)
         except_block = self.process_body(t.handlers)
+        finally_string = ""
         if t.orelse:
             raise Exception("TODO: Implement else block for try/except")
             else_block = self.process_body(t.orelse)
         if t.finalbody:
-            raise Exception("TODO: Implement finally block for try/except")
             finally_block = self.process_body(t.finalbody)
-        return f"try {{{try_block}}} catch(e) {{{except_block}}}"
+            finally_string = f"\nfinally {{{N+finally_block}}}"
+        return f"try {{{try_block}}}\ncatch (e) {{{except_block}}}" + finally_string
 
     @pre_hook_wrapper
     @post_hook_wrapper
