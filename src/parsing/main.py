@@ -602,7 +602,7 @@ class Visitor:
     def process_joined_string(self, body: ast.JoinedStr) -> str:
         original_direct_parent = self.direct_parent[0], self.direct_parent[1]
         self.direct_parent = ('JoinedStr', None)
-        s = "".join([val.value if type(val) == Constant else f"${{{self.process_statement(val.value)}}}" for val in body.values])
+        s = "".join([val.value if type(val) == Constant else f"${{{val.id}}}" if type(val) == Name else f"${{{self.process_statement(val.value)}}}" for val in body.values])
         self.direct_parent = original_direct_parent
         return f"`{s}`"
 
