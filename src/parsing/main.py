@@ -101,6 +101,8 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_bool_op(self, arg: ast.BoolOp) -> str:
+        if type(arg) == ast.Constant:
+            return self.process_arg(arg)
         if type(arg.op) == Or:
             return f"{self.process_statement(arg.values[0])} {OR} {self.process_statement(arg.values[1])}"
         elif type(arg.op) == And:
