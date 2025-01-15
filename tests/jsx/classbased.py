@@ -1,6 +1,6 @@
 """"""
 
-class AppWithProps:
+class ComponentWithProps:
     def __init__(self, props):
         self.props = props
 
@@ -9,7 +9,7 @@ class AppWithProps:
 
 
 # class Welcome extends React.Component
-class AppWithState(React.Component):
+class ComponentWithState(React.Component):
     def __init__(self):
         self.state = {
             "name": "John",
