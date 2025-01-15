@@ -87,8 +87,7 @@ class Visitor:
             BoolOp: lambda a: self.process_bool_op(a),
             Lambda: lambda a: self.process_lambda(a),
 
-            # wrap_string?
-            JoinedStr: lambda a: self.process_joined_string(a),
+            JoinedStr: lambda a: '{' + self.process_joined_string(a) + '}' if wrap_string else self.process_joined_string(a),
 
             Tuple: lambda a: self.process_tuple(a),
             List: lambda a: self.process_list(a),
