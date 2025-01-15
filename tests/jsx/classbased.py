@@ -5,7 +5,7 @@ class ComponentWithProps(React.Component):
         self.props = props
 
     def render(self):
-        return (Div({self.props.author.name}, className="App"))
+        return (div({self.props.author.name}, className="App"))
 
 
 # class Welcome extends React.Component
@@ -21,10 +21,10 @@ class ComponentWithState(React.Component):
 
     def render(self):
         return (
-            Div(
-                H1(f"Hello {self.state['name']}"),
-                H1(f"Your age: {self.state['age']}"),
-                Button("Change name", onClick=self.changeName("Bob")),
-                Button("Change age", onClick=self.setState({"age": 50})),
+            div(
+                h1(f"Hello {self.state['name']}"),
+                h1(f"Your age: {self.state['age']}"),
+                button("Change name", onClick=self.changeName("Bob")),
+                button("Change age", onClick=self.setState({"age": 50})),
             )
         )
