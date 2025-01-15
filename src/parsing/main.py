@@ -228,7 +228,7 @@ class Visitor:
 
         if self.inside_return and ((function_name.lower() in ['div', 'ul', 'ol', 'li', 'p', 'route']) or (function_name in self.imported_components)):
             # HTML TAG CASE or IMPORTED REACT COMPONENT CASE
-            close1, close2 = ('/', '') if function_name.lower() in self else ('', f'</{function_name}>')
+            close1, close2 = ('/', '') if function_name.lower() in self.imported_components else ('', f'</{function_name}>')
             if content:
                 actual_contents = [kw.value for kw in kwargs if kw.arg == 'content'][0]
                 kwargs_string += ", ".join([f"{kw.arg}={self.process_arg(kw.value)}" for kw in kwargs if not kw.arg == 'content'])
