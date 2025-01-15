@@ -34,7 +34,7 @@ class App(React.Component):
     def render(self):
         return (
             div(
-                ComponentWithProps(),
+                ComponentWithProps(author={'name': 'Jeff'}),
                 ComponentWithState()
             )
         )
