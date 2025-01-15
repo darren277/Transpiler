@@ -70,18 +70,22 @@ class Visitor:
 
     @pre_hook_wrapper
     @post_hook_wrapper
-    def process_arg(self, a: ArgType) -> str:
+    def process_arg(self, a: ArgType, wrap_string=False) -> str:
         case_switch = {
             arg: lambda a: self.process_funcdef_arg(a),
             Call: lambda a: self.process_call(a),
             Name: lambda a: a.id,
             Attribute: lambda a: self.process_attribute(a),
-            Constant: lambda a: self.process_constant(a),
+
+            Constant: lambda a: '{' + self.process_constant(a) + '}' if wrap_string else self.process_constant(a),
+
             UnaryOp: lambda a: self.process_unary_op(a),
             # BinOp: lambda a: self.process_bin_op(a),
             Compare: lambda a: self.process_compare(a),
             BoolOp: lambda a: self.process_bool_op(a),
             Lambda: lambda a: self.process_lambda(a),
+
+            # wrap_string?
             JoinedStr: lambda a: self.process_joined_string(a),
 
             Tuple: lambda a: self.process_tuple(a),
@@ -219,7 +223,8 @@ class Visitor:
                     first_arg_id = args[0].func.value.id if type(args[0].func) == Attribute else args[0].func.id
                 except:
                     first_arg_id = None
-            args_string += ", ".join([self.process_arg(arg) for arg in args[1:]]) if first_arg_id == 'dict' else ', '.join([self.process_arg(arg) for arg in args])
+            sep, wrap_string = ("", True) if self.inside_return or self.direct_parent[1] == 'render' else (", ", False)
+            args_string += sep.join([self.process_arg(arg, wrap_string=wrap_string) for arg in args[1:]]) if first_arg_id == 'dict' else sep.join([self.process_arg(arg, wrap_string=wrap_string) for arg in args])
 
         kwargs = call.keywords
         if first_arg_id == 'dict':
@@ -236,7 +241,7 @@ class Visitor:
                 kwargs_string += ", ".join([f"{kw.arg}={self.process_arg(kw.value)}" for kw in kwargs if not kw.arg == 'content'])
                 return f"<{function_name}{kwargs_string.replace(', ', ' ')}{close1}>{self.process_statement(actual_contents)}{close2}"
             else:
-                kwargs_string += ", ".join([f"{kw.arg}={self.process_arg(kw.value)}" for kw in kwargs])
+                kwargs_string += ", ".join([f"{kw.arg}={{{self.process_arg(kw.value)}}}" for kw in kwargs])
                 if "True" in kwargs_string:
                     kwargs_string = kwargs_string.replace('="True"', '')
                 return f"<{function_name}{kwargs_string.replace(', ', ' ')}{close1}>{args_string}{close2}"
@@ -261,7 +266,12 @@ class Visitor:
 
     def process_set(self, s) -> str:
         result = self.config.set_sep.join([self.process_arg(el) for el in s.elts])
-        return f"new Set({self.config.set_wrapper[0]}{result}{self.config.set_wrapper[1]})"
+        if self.config.set_wrapper and not self.config.react_app:
+            return f"new Set({self.config.set_wrapper[0]}{result}{self.config.set_wrapper[1]})"
+        elif self.config.react_app:
+            return f"{{{result}}}"
+        else:
+            raise Exception("process_set() case not yet implemented.")
 
     def process_list(self, l) -> str:
         result = self.config.list_sep.join([self.process_statement(el) for el in l.elts])
