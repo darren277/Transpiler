@@ -61,8 +61,11 @@ class Hooks:
             if len(loc['args']) > 1: raise ValueError("Too many arguments for process_constant")
             constant_types.extend(['ast.'+type(arg).__name__ for arg in loc['args']])
         elif func_name == 'process_attribute':
-            if len(loc['args']) > 1: raise ValueError("Too many arguments for process_attribute")
-            attribute_types.extend(['ast.'+type(arg).__name__ for arg in loc['args']])
+            if len(loc['args']) > 1:
+                # raise ValueError("Too many arguments for process_attribute")
+                # This is a case with the `s` attribute passed in (used in JSX parsing)...
+                attribute_types.extend(['ast.' + type(arg).__name__ for arg in loc['args']])
+            attribute_types.extend(['ast.' + type(arg).__name__ for arg in loc['args']])
         elif func_name == 'process_bin_op':
             if len(loc['args']) > 1: raise ValueError("Too many arguments for process_bin_op")
             bin_op_types.extend(['ast.'+type(arg).__name__ for arg in loc['args']])

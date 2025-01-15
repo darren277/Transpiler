@@ -33,15 +33,19 @@ class Visitor:
         opts = dict()
         if linting_options:
             opts.update(linting_options)
-        if self.react:
+        if self.config.react_app:
             opts.update(e4x=True)
+            s = "import React from 'react';\n\n" + s
+            s = s + '\n\nexport default App;\n\n'
         return beautify(s, opts=opts)
 
     @pre_hook_wrapper
     @post_hook_wrapper
-    def process_body(self, body: BodyType, cls: bool = False) -> str:
+    def process_body(self, body: BodyType, cls: bool = False, constructor: bool = False) -> str:
         s = ''
         for node in body:
+            if constructor == True:
+                s += 'super(props)\n'
             s += self.process_statement(node, cls=cls)
             if len(s) > 0:
                 s += '\n'
@@ -68,19 +72,22 @@ class Visitor:
 
     @pre_hook_wrapper
     @post_hook_wrapper
-    def process_arg(self, a: ArgType) -> str:
+    def process_arg(self, a: ArgType, wrap_string=False) -> str:
         case_switch = {
             arg: lambda a: self.process_funcdef_arg(a),
             Call: lambda a: self.process_call(a),
             Name: lambda a: a.id,
             Attribute: lambda a: self.process_attribute(a),
-            Constant: lambda a: self.process_constant(a),
+
+            Constant: lambda a: '{' + self.process_constant(a) + '}' if wrap_string else self.process_constant(a),
+
             UnaryOp: lambda a: self.process_unary_op(a),
             # BinOp: lambda a: self.process_bin_op(a),
             Compare: lambda a: self.process_compare(a),
             BoolOp: lambda a: self.process_bool_op(a),
             Lambda: lambda a: self.process_lambda(a),
-            JoinedStr: lambda a: self.process_joined_string(a),
+
+            JoinedStr: lambda a: '{' + self.process_joined_string(a) + '}' if wrap_string else self.process_joined_string(a),
 
             Tuple: lambda a: self.process_tuple(a),
             List: lambda a: self.process_list(a),
@@ -135,6 +142,8 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_attribute_call(self, call: ast.Call, s: str = "") -> str:
+        if call.func.value.id == 'self':
+            call.func.value.id = 'this'
         try:
             call_func = call.func
         except:
@@ -162,6 +171,9 @@ class Visitor:
         if s.startswith('.'):
             breakpoint()
         return s
+
+    def is_react_component(self, function_name: str):
+        return (((function_name.lower() in ['div', 'ul', 'ol', 'li', 'p', 'button', 'h1', 'route']) or (function_name in self.imported_components) or (function_name in self.defined_classes)))
 
     @pre_hook_wrapper
     @post_hook_wrapper
@@ -217,7 +229,8 @@ class Visitor:
                     first_arg_id = args[0].func.value.id if type(args[0].func) == Attribute else args[0].func.id
                 except:
                     first_arg_id = None
-            args_string += ", ".join([self.process_arg(arg) for arg in args[1:]]) if first_arg_id == 'dict' else ', '.join([self.process_arg(arg) for arg in args])
+            sep, wrap_string = ("", True) if (self.inside_return or self.direct_parent[1] == 'render') and self.is_react_component(function_name) else (", ", False)
+            args_string += sep.join([self.process_arg(arg, wrap_string=wrap_string) for arg in args[1:]]) if first_arg_id == 'dict' else sep.join([self.process_arg(arg, wrap_string=wrap_string) for arg in args])
 
         kwargs = call.keywords
         if first_arg_id == 'dict':
@@ -226,15 +239,15 @@ class Visitor:
         if kwargs and not [kw.arg for kw in kwargs if kw.arg == 'content']:
             kwargs_string += ', '
 
-        if self.inside_return and ((function_name.lower() in ['div', 'ul', 'ol', 'li', 'p', 'route']) or (function_name in self.imported_components)):
+        if self.inside_return and self.is_react_component(function_name):
             # HTML TAG CASE or IMPORTED REACT COMPONENT CASE
-            close1, close2 = ('/', '') if function_name.lower() in self else ('', f'</{function_name}>')
+            close1, close2 = ('/', '') if function_name.lower() in self.imported_components else ('', f'</{function_name}>')
             if content:
                 actual_contents = [kw.value for kw in kwargs if kw.arg == 'content'][0]
                 kwargs_string += ", ".join([f"{kw.arg}={self.process_arg(kw.value)}" for kw in kwargs if not kw.arg == 'content'])
                 return f"<{function_name}{kwargs_string.replace(', ', ' ')}{close1}>{self.process_statement(actual_contents)}{close2}"
             else:
-                kwargs_string += ", ".join([f"{kw.arg}={self.process_arg(kw.value)}" for kw in kwargs])
+                kwargs_string += ", ".join([f"{kw.arg}={{{self.process_arg(kw.value)}}}" for kw in kwargs])
                 if "True" in kwargs_string:
                     kwargs_string = kwargs_string.replace('="True"', '')
                 return f"<{function_name}{kwargs_string.replace(', ', ' ')}{close1}>{args_string}{close2}"
@@ -259,7 +272,12 @@ class Visitor:
 
     def process_set(self, s) -> str:
         result = self.config.set_sep.join([self.process_arg(el) for el in s.elts])
-        return f"new Set({self.config.set_wrapper[0]}{result}{self.config.set_wrapper[1]})"
+        if self.config.set_wrapper and not self.config.react_app:
+            return f"new Set({self.config.set_wrapper[0]}{result}{self.config.set_wrapper[1]})"
+        elif self.config.react_app:
+            return f"{{{result}}}"
+        else:
+            raise Exception("process_set() case not yet implemented.")
 
     def process_list(self, l) -> str:
         result = self.config.list_sep.join([self.process_statement(el) for el in l.elts])
@@ -629,10 +647,15 @@ class Visitor:
         arg_string = ', '.join([self.process_funcdef_arg(arg, default) for arg, default in zip(args, defaults)])
         returns = ' -> ' + self.process_statement(func.returns) if func.returns else ''
         ## TODO: decorators = "\n".join([f"@{self.process_statement(decorator)}" for decorator in func.decorator_list]) if func.decorator_list else ""
+
         func_name = 'constructor' if func.name == '__init__' else func.name
+        if func_name == 'constructor' and 'props' not in arg_string:
+            arg_string = 'props'
+
         func_prefix = '' if cls or self.direct_parent[0] == 'cls' else 'function '
         self.direct_parent = ('func', func_name)
-        body = self.process_body(func.body)
+        body = self.process_body(func.body, constructor=True if func_name == 'constructor' else False)
+
         return f"{func_prefix}{func_name} ({arg_string}){returns} {{ {body} }}"
 
     @pre_hook_wrapper
@@ -645,6 +668,7 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_cls(self, cls: ClsType) -> str:
+        self.defined_classes.append(cls.name)
         # Note that JavaScript cannot handle multiple inheritence in a straightforward manner.
         # You would have to create a mixin (a separate class), which is a bit out of the scope of this project.
         inherits = ''
