@@ -2,6 +2,7 @@
 
 class ComponentWithProps(React.Component):
     def __init__(self, props):
+        #TODO: (currently automatically injecting) super().__init__(props)
         self.props = props
 
     def render(self):

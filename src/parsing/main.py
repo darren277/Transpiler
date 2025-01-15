@@ -41,9 +41,11 @@ class Visitor:
 
     @pre_hook_wrapper
     @post_hook_wrapper
-    def process_body(self, body: BodyType, cls: bool = False) -> str:
+    def process_body(self, body: BodyType, cls: bool = False, constructor: bool = False) -> str:
         s = ''
         for node in body:
+            if constructor == True:
+                s += 'super(props)\n'
             s += self.process_statement(node, cls=cls)
             if len(s) > 0:
                 s += '\n'
@@ -643,10 +645,15 @@ class Visitor:
         arg_string = ', '.join([self.process_funcdef_arg(arg, default) for arg, default in zip(args, defaults)])
         returns = ' -> ' + self.process_statement(func.returns) if func.returns else ''
         ## TODO: decorators = "\n".join([f"@{self.process_statement(decorator)}" for decorator in func.decorator_list]) if func.decorator_list else ""
+
         func_name = 'constructor' if func.name == '__init__' else func.name
+        if func_name == 'constructor' and 'props' not in arg_string:
+            arg_string = 'props'
+
         func_prefix = '' if cls or self.direct_parent[0] == 'cls' else 'function '
         self.direct_parent = ('func', func_name)
-        body = self.process_body(func.body)
+        body = self.process_body(func.body, constructor=True if func_name == 'constructor' else False)
+
         return f"{func_prefix}{func_name} ({arg_string}){returns} {{ {body} }}"
 
     @pre_hook_wrapper
