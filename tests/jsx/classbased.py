@@ -25,8 +25,8 @@ class ComponentWithState(React.Component):
             div(
                 h1(f"Hello {self.state['name']}"),
                 h1(f"Your age: {self.state['age']}"),
-                button("Change name", onClick=self.changeName("Bob")),
-                button("Change age", onClick=self.setState({"age": 50})),
+                button("Change name", onClick=lambda: self.changeName("Bob")),
+                button("Change age", onClick=lambda: self.setState({"age": 50})),
             )
         )
 
