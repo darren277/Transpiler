@@ -235,7 +235,7 @@ class Visitor:
         if kwargs and not [kw.arg for kw in kwargs if kw.arg == 'content']:
             kwargs_string += ', '
 
-        if self.inside_return and ((function_name.lower() in ['div', 'ul', 'ol', 'li', 'p', 'route']) or (function_name in self.imported_components)):
+        if self.inside_return and ((function_name.lower() in ['div', 'ul', 'ol', 'li', 'p', 'button', 'h1', 'route']) or (function_name in self.imported_components) or (function_name in self.defined_classes)):
             # HTML TAG CASE or IMPORTED REACT COMPONENT CASE
             close1, close2 = ('/', '') if function_name.lower() in self.imported_components else ('', f'</{function_name}>')
             if content:
@@ -659,6 +659,7 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_cls(self, cls: ClsType) -> str:
+        self.defined_classes.append(cls.name)
         # Note that JavaScript cannot handle multiple inheritence in a straightforward manner.
         # You would have to create a mixin (a separate class), which is a bit out of the scope of this project.
         inherits = ''

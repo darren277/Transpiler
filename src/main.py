@@ -36,3 +36,6 @@ class Code:
 
         self.log_file = None
         self.log_file = config.log_file
+
+        self.defined_classes = []
+
