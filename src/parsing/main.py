@@ -226,7 +226,7 @@ class Visitor:
                     first_arg_id = args[0].func.value.id if type(args[0].func) == Attribute else args[0].func.id
                 except:
                     first_arg_id = None
-            sep, wrap_string = ("", True) if self.inside_return or self.direct_parent[1] == 'render' else (", ", False)
+            sep, wrap_string = ("", True) if (self.inside_return or self.direct_parent[1] == 'render') and (((function_name.lower() in ['div', 'ul', 'ol', 'li', 'p', 'button', 'h1', 'route']) or (function_name in self.imported_components) or (function_name in self.defined_classes))) else (", ", False)
             args_string += sep.join([self.process_arg(arg, wrap_string=wrap_string) for arg in args[1:]]) if first_arg_id == 'dict' else sep.join([self.process_arg(arg, wrap_string=wrap_string) for arg in args])
 
         kwargs = call.keywords
