@@ -28,3 +28,12 @@ class ComponentWithState(React.Component):
                 button("Change age", onClick=self.setState({"age": 50})),
             )
         )
+
+class App(React.Component):
+    def render(self):
+        return (
+            div(
+                ComponentWithProps(),
+                ComponentWithState()
+            )
+        )
