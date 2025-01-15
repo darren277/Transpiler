@@ -22,8 +22,8 @@ class AppWithState(React.Component):
     def render(self):
         return (
             Div(
-                H1("Hello ", self.state["name"]),
-                H1("Your age: ", self.state["age"]),
+                H1(f"Hello {self.state['name']}"),
+                H1(f"Your age: {self.state['age']}"),
                 Button("Change name", onClick=self.changeName("Bob")),
                 Button("Change age", onClick=self.setState({"age": 50})),
             )
