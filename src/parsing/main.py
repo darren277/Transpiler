@@ -36,6 +36,7 @@ class Visitor:
         if self.config.react_app:
             opts.update(e4x=True)
             s = "import React from 'react';\n\n" + s
+            s = s + '\n\nexport default App;\n\n'
         return beautify(s, opts=opts)
 
     @pre_hook_wrapper
