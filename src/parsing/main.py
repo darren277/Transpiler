@@ -172,6 +172,9 @@ class Visitor:
             breakpoint()
         return s
 
+    def is_react_component(self, function_name: str):
+        return (((function_name.lower() in ['div', 'ul', 'ol', 'li', 'p', 'button', 'h1', 'route']) or (function_name in self.imported_components) or (function_name in self.defined_classes)))
+
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_named_call(self, call: ast.Call) -> str:
@@ -226,7 +229,7 @@ class Visitor:
                     first_arg_id = args[0].func.value.id if type(args[0].func) == Attribute else args[0].func.id
                 except:
                     first_arg_id = None
-            sep, wrap_string = ("", True) if (self.inside_return or self.direct_parent[1] == 'render') and (((function_name.lower() in ['div', 'ul', 'ol', 'li', 'p', 'button', 'h1', 'route']) or (function_name in self.imported_components) or (function_name in self.defined_classes))) else (", ", False)
+            sep, wrap_string = ("", True) if (self.inside_return or self.direct_parent[1] == 'render') and self.is_react_component(function_name) else (", ", False)
             args_string += sep.join([self.process_arg(arg, wrap_string=wrap_string) for arg in args[1:]]) if first_arg_id == 'dict' else sep.join([self.process_arg(arg, wrap_string=wrap_string) for arg in args])
 
         kwargs = call.keywords
@@ -236,7 +239,7 @@ class Visitor:
         if kwargs and not [kw.arg for kw in kwargs if kw.arg == 'content']:
             kwargs_string += ', '
 
-        if self.inside_return and ((function_name.lower() in ['div', 'ul', 'ol', 'li', 'p', 'button', 'h1', 'route']) or (function_name in self.imported_components) or (function_name in self.defined_classes)):
+        if self.inside_return and self.is_react_component(function_name):
             # HTML TAG CASE or IMPORTED REACT COMPONENT CASE
             close1, close2 = ('/', '') if function_name.lower() in self.imported_components else ('', f'</{function_name}>')
             if content:
