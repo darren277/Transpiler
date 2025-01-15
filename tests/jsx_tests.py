@@ -11,6 +11,7 @@ def test_loaded_file_with_run(file_path: str or None, custom_string: str = None)
     if not custom_string:
         # NOTE: Be sure to run `make jsx-install` (aka: `cd tests/testout/jsx && npm install`) before running this test.
         js = Main(open(file_path, 'r').read())
+        js.config.react_app = True
         s = js.transpile()
         print(s)
         # exec(s)

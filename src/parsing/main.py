@@ -33,8 +33,9 @@ class Visitor:
         opts = dict()
         if linting_options:
             opts.update(linting_options)
-        if self.react:
+        if self.config.react_app:
             opts.update(e4x=True)
+            s = "import React from 'react';\n\n" + s
         return beautify(s, opts=opts)
 
     @pre_hook_wrapper
