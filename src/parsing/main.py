@@ -80,7 +80,7 @@ class Visitor:
         case_switch = {
             arg: lambda a: self.process_funcdef_arg(a),
             Call: lambda a: self.process_call(a),
-            Name: lambda a: a.id,
+            Name: lambda a: f'{{{a.id}}}' if wrap_string else a.id,
             Attribute: lambda a: self.process_attribute(a),
 
             Constant: lambda a: '{' + self.process_constant(a) + '}' if wrap_string else self.process_constant(a),
