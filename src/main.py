@@ -38,4 +38,5 @@ class Code:
         self.log_file = config.log_file
 
         self.defined_classes = []
+        self.defined_functions = []
 

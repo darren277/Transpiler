@@ -2,6 +2,7 @@
 import ast
 from _ast import *
 
+from src.react import HTML_TAGS
 from src.typedefs import StatementType, BodyType, ClsType, TargetType, ArgType
 from utils import pre_hook_wrapper, post_hook_wrapper, compare_ops, return_func, NOT, OR, AND, operators, N
 from jsbeautifier import beautify
@@ -13,7 +14,7 @@ class Visitor:
         if line.startswith('from'):
             # from special_types import var, const, let, ternary
             actual_line = line.replace('from ', '').split(' import ')
-            source = actual_line[0]
+            source = actual_line[0].replace('src.react', 'react')
             components = actual_line[1]
         else:
             line = line.replace('._import._from', '')
@@ -26,7 +27,7 @@ class Visitor:
         for component in separated_components:
             self.imported_components.append(component)
 
-        self.import_lines.append(f"import {components} from {source};")
+        self.import_lines.append(f"import {{{components}}} from {source};")
 
     def transpile(self, linting_options: dict = None) -> str:
         s = self.process_body(self.ast.body)
@@ -35,9 +36,12 @@ class Visitor:
             opts.update(linting_options)
         if self.config.react_app:
             opts.update(e4x=True)
-            s = "import React from 'react';\n\n" + s
+            s = "import React from 'react';\n\n" + self.add_other_imports() + s
             s = s + '\n\nexport default App;\n\n'
         return beautify(s, opts=opts)
+
+    def add_other_imports(self):
+        return "\n".join(self.import_lines)
 
     @pre_hook_wrapper
     @post_hook_wrapper
@@ -76,7 +80,7 @@ class Visitor:
         case_switch = {
             arg: lambda a: self.process_funcdef_arg(a),
             Call: lambda a: self.process_call(a),
-            Name: lambda a: a.id,
+            Name: lambda a: f'{{{a.id}}}' if wrap_string else a.id,
             Attribute: lambda a: self.process_attribute(a),
 
             Constant: lambda a: '{' + self.process_constant(a) + '}' if wrap_string else self.process_constant(a),
@@ -172,8 +176,11 @@ class Visitor:
             breakpoint()
         return s
 
+    def is_already_defined(self, function_name: str) -> bool:
+        return (function_name in self.imported_components) or (function_name in self.defined_classes) or (function_name in self.defined_functions)
+
     def is_react_component(self, function_name: str):
-        return (((function_name.lower() in ['div', 'ul', 'ol', 'li', 'p', 'button', 'h1', 'route']) or (function_name in self.imported_components) or (function_name in self.defined_classes)))
+        return (((function_name.lower == 'Fragment'.lower()) or (function_name.lower() in HTML_TAGS) or self.is_already_defined(function_name)))
 
     @pre_hook_wrapper
     @post_hook_wrapper
@@ -230,6 +237,11 @@ class Visitor:
                 except:
                     first_arg_id = None
             sep, wrap_string = ("", True) if (self.inside_return or self.direct_parent[1] == 'render') and self.is_react_component(function_name) else (", ", False)
+
+            # In case you want to do the <></> syntax for React fragments...
+            if function_name == 'Fragment':
+                return f"<>{''.join([self.process_arg(arg, wrap_string=wrap_string) for arg in args])}</>"
+
             args_string += sep.join([self.process_arg(arg, wrap_string=wrap_string) for arg in args[1:]]) if first_arg_id == 'dict' else sep.join([self.process_arg(arg, wrap_string=wrap_string) for arg in args])
 
         kwargs = call.keywords
@@ -378,7 +390,7 @@ class Visitor:
         ## TODO: Also, multiple assignments in same statement...
         #if self.config.debug: print("ASSIGN")
         targets = ", ".join([self.process_target(t) for t in e.targets]) if not augment else self.process_statement(e.target)
-        new = 'new ' if type(e.value) == Call else ''
+        new = 'new ' if type(e.value) == Call and not self.is_already_defined(e.value.func.id) else ''
         if type(e.value) == ast.Call:
             if e.value.func.id == 'ternary':
                 new = ''
@@ -639,6 +651,8 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_function(self, func: ast.FunctionDef, cls: bool = False) -> str:
+        self.defined_functions.append(func.name)
+
         n_defaults = len(_defaults := func.args.defaults)
         _defaults = iter(_defaults)
         args = [arg for arg in func.args.args if arg.arg != 'self']
@@ -661,6 +675,10 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_funcdef_arg(self, a: ast.arg, default = None) -> str:
+        if self.config.react_app and a.arg == 'props':
+            # Maybe not ideal, but doing this for now until I come up with a better solution...
+            return '{props}'
+
         hint = ': ' + self.process_statement(a.annotation) if a.annotation else ''
         default = ' = ' + self.process_statement(default) if default else ''
         return f"{a.arg}{hint}{default}"
