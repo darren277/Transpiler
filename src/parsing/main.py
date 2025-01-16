@@ -2,6 +2,7 @@
 import ast
 from _ast import *
 
+from src.react import HTML_TAGS
 from src.typedefs import StatementType, BodyType, ClsType, TargetType, ArgType
 from utils import pre_hook_wrapper, post_hook_wrapper, compare_ops, return_func, NOT, OR, AND, operators, N
 from jsbeautifier import beautify
@@ -172,8 +173,11 @@ class Visitor:
             breakpoint()
         return s
 
+    def is_already_defined(self, function_name: str) -> bool:
+        return (function_name in self.imported_components) or (function_name in self.defined_classes) or (function_name in self.defined_functions)
+
     def is_react_component(self, function_name: str):
-        return (((function_name.lower() in ['div', 'ul', 'ol', 'li', 'p', 'button', 'h1', 'route']) or (function_name in self.imported_components) or (function_name in self.defined_classes)))
+        return (((function_name.lower == 'Fragment'.lower()) or (function_name.lower() in HTML_TAGS) or self.is_already_defined(function_name)))
 
     @pre_hook_wrapper
     @post_hook_wrapper
@@ -378,7 +382,7 @@ class Visitor:
         ## TODO: Also, multiple assignments in same statement...
         #if self.config.debug: print("ASSIGN")
         targets = ", ".join([self.process_target(t) for t in e.targets]) if not augment else self.process_statement(e.target)
-        new = 'new ' if type(e.value) == Call else ''
+        new = 'new ' if type(e.value) == Call and not self.is_already_defined(e.value.func.id) else ''
         if type(e.value) == ast.Call:
             if e.value.func.id == 'ternary':
                 new = ''
@@ -639,6 +643,8 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_function(self, func: ast.FunctionDef, cls: bool = False) -> str:
+        self.defined_functions.append(func.name)
+
         n_defaults = len(_defaults := func.args.defaults)
         _defaults = iter(_defaults)
         args = [arg for arg in func.args.args if arg.arg != 'self']
