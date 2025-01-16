@@ -14,7 +14,7 @@ class Visitor:
         if line.startswith('from'):
             # from special_types import var, const, let, ternary
             actual_line = line.replace('from ', '').split(' import ')
-            source = actual_line[0]
+            source = actual_line[0].replace('src.react', 'react')
             components = actual_line[1]
         else:
             line = line.replace('._import._from', '')
@@ -27,7 +27,7 @@ class Visitor:
         for component in separated_components:
             self.imported_components.append(component)
 
-        self.import_lines.append(f"import {components} from {source};")
+        self.import_lines.append(f"import {{{components}}} from {source};")
 
     def transpile(self, linting_options: dict = None) -> str:
         s = self.process_body(self.ast.body)
@@ -36,9 +36,12 @@ class Visitor:
             opts.update(linting_options)
         if self.config.react_app:
             opts.update(e4x=True)
-            s = "import React from 'react';\n\n" + s
+            s = "import React from 'react';\n\n" + self.add_other_imports() + s
             s = s + '\n\nexport default App;\n\n'
         return beautify(s, opts=opts)
+
+    def add_other_imports(self):
+        return "\n".join(self.import_lines)
 
     @pre_hook_wrapper
     @post_hook_wrapper
