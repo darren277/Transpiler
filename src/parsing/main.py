@@ -237,6 +237,11 @@ class Visitor:
                 except:
                     first_arg_id = None
             sep, wrap_string = ("", True) if (self.inside_return or self.direct_parent[1] == 'render') and self.is_react_component(function_name) else (", ", False)
+
+            # In case you want to do the <></> syntax for React fragments...
+            if function_name == 'Fragment':
+                return f"<>{''.join([self.process_arg(arg, wrap_string=wrap_string) for arg in args])}</>"
+
             args_string += sep.join([self.process_arg(arg, wrap_string=wrap_string) for arg in args[1:]]) if first_arg_id == 'dict' else sep.join([self.process_arg(arg, wrap_string=wrap_string) for arg in args])
 
         kwargs = call.keywords
