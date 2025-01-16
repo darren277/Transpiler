@@ -675,6 +675,10 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_funcdef_arg(self, a: ast.arg, default = None) -> str:
+        if self.config.react_app and a.arg == 'props':
+            # Maybe not ideal, but doing this for now until I come up with a better solution...
+            return '{props}'
+
         hint = ': ' + self.process_statement(a.annotation) if a.annotation else ''
         default = ' = ' + self.process_statement(default) if default else ''
         return f"{a.arg}{hint}{default}"
