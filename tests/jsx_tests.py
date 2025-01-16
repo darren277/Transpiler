@@ -41,7 +41,9 @@ function App() {
 export default App;
 '''
 
+# TODO: Turn these into `sys.argv` type of conditional...
 # Test `simple_app` to make sure the React and Node and Webpack infrastructure are working:
-test_loaded_file_with_run(None, simple_app)
+#test_loaded_file_with_run(None, simple_app)
 
 #test_loaded_file_with_run('tests/jsx/classbased.py')
+test_loaded_file_with_run('tests/jsx/functionbased.py')
