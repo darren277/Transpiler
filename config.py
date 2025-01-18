@@ -17,10 +17,12 @@ class ASTConfig:
         self.assign = 'var'
         self.assign = 'let'
 
-        self.wrap_return = "()"
+        #self.wrap_return = "()"
+        self.wrap_return = wrap_return
         self.list_sep = ", "
         self.set_sep = ","
-        self.set_wrapper = "[]"
+        #self.set_wrapper = "[]"
+        self.set_wrapper = ""
         self.dict_sep = ","
         self.dict_wrapper = "{}"
         self.tuple_sep = ","
@@ -31,7 +33,6 @@ class ASTConfig:
         #self.end_statement = ';\n'
         self.end_statement = '\n'
         self.assign = assign
-        self.wrap_return = wrap_return
         # self.list_sep = config.list_sep
 
         self.react = True
