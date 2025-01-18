@@ -338,7 +338,7 @@ class Visitor:
 
     @return_func
     def process_return(self, r) -> str:
-        if not self.config.wrap_return:
+        if not self.config.wrap_return or len(self.config.wrap_return) == 0:
             wrap_return_left = ''
             wrap_return_right = ''
         else:
