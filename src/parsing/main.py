@@ -48,7 +48,7 @@ class Visitor:
     def process_body(self, body: BodyType, cls: bool = False, constructor: bool = False) -> str:
         s = ''
         for node in body:
-            if constructor == True:
+            if constructor == True and self.config.react_app:
                 s += 'super(props)\n'
             s += self.process_statement(node, cls=cls)
             #if len(s) > 0: s += '\n'
@@ -662,7 +662,7 @@ class Visitor:
         ## TODO: decorators = "\n".join([f"@{self.process_statement(decorator)}" for decorator in func.decorator_list]) if func.decorator_list else ""
 
         func_name = 'constructor' if func.name == '__init__' else func.name
-        if func_name == 'constructor' and 'props' not in arg_string:
+        if func_name == 'constructor' and 'props' not in arg_string and self.config.react_app:
             arg_string = 'props'
 
         func_prefix = '' if cls or self.direct_parent[0] == 'cls' else 'function '
