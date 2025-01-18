@@ -17,8 +17,6 @@ def test_name_arg():
     expected = 'x'
     assert_beautified(result, expected)
 
-test_name_arg()
-
 
 def test_attribute_arg():
     arg = ast.Attribute(
@@ -30,8 +28,6 @@ def test_attribute_arg():
     expected = 'x.y'
     assert_beautified(result, expected)
 
-test_attribute_arg()
-
 
 def test_lambda_arg():
     arg = ast.Lambda(args=ast.arguments(args=[ast.arg(arg='x')]), body=ast.Constant(value=1))
@@ -39,8 +35,6 @@ def test_lambda_arg():
     print(result)
     expected = 'x => 1'
     assert_beautified(result, expected)
-
-test_lambda_arg()
 
 
 def test_bin_op_arg():
@@ -50,8 +44,6 @@ def test_bin_op_arg():
     expected = '1 * 2'
     assert_beautified(result, expected)
 
-test_bin_op_arg()
-
 
 def test_joined_str_arg():
     arg = ast.JoinedStr(values=[ast.Constant(value='x = '), ast.Name('x'), ast.Constant(value=' and y = '), ast.Name('y')])
@@ -60,8 +52,6 @@ def test_joined_str_arg():
     expected = "`x = ${x} and y = ${y}`"
     assert_beautified(result, expected)
 
-test_joined_str_arg()
-
 
 def test_constant_arg():
     arg = ast.Constant(value='x')
@@ -69,6 +59,3 @@ def test_constant_arg():
     print(result)
     expected = '"x"'
     assert_beautified(result, expected)
-
-test_constant_arg()
-
