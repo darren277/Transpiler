@@ -51,8 +51,7 @@ class Visitor:
             if constructor == True:
                 s += 'super(props)\n'
             s += self.process_statement(node, cls=cls)
-            if len(s) > 0:
-                s += '\n'
+            #if len(s) > 0: s += '\n'
         return s
 
     def process_left(self, left) -> str:

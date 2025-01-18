@@ -31,7 +31,8 @@ class ASTConfig:
         self.none = 'null'
         self._self = 'this'
         #self.end_statement = ';\n'
-        self.end_statement = '\n'
+        #self.end_statement = '\n'
+        self.end_statement = ''
         self.assign = assign
         # self.list_sep = config.list_sep
 
