@@ -283,8 +283,10 @@ class Visitor:
 
     def process_set(self, s) -> str:
         result = self.config.set_sep.join([self.process_arg(el) for el in s.elts])
-        if self.config.set_wrapper and not self.config.react_app:
+        if len(self.config.set_wrapper) > 0 and not self.config.react_app:
             return f"new Set({self.config.set_wrapper[0]}{result}{self.config.set_wrapper[1]})"
+        elif not self.config.react_app:
+            return f"new Set([{result}])"
         elif self.config.react_app:
             return f"{{{result}}}"
         else:
