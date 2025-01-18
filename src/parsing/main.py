@@ -548,7 +548,8 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_while(self, e) -> str:
-        return f"while ({self.process_compare(e.test)}) {{{N.join([self.process_statement(s) for s in e.body])}}}"
+        test = self.process_compare(e.test) if type(e.test) == Compare else self.process_arg(e.test)
+        return f"while ({test}) {{{N.join([self.process_statement(s) for s in e.body])}}}"
 
     @pre_hook_wrapper
     @post_hook_wrapper
