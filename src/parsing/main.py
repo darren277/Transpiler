@@ -591,10 +591,16 @@ class Visitor:
     def process_if(self, e: ast.If) -> str:
         yo = N.join([self.process_statement(exp) for exp in e.body]) if type(e.body) == list else self.process_statement(e.body)
         self.direct_parent = ('conditional', None)
+
+        orelse = ""
+
+        if e.orelse:
+            orelse = f"else {{\n{self.process_statement(e.orelse)}\n}}"
+
         if type(e.test) == Name:
-            return f"if ({e.test.id}) {{{N + yo + N}}}"
+            return f"if ({e.test.id}) {{{N + yo + N}}} {orelse}"
         else:
-            return f"if ({self.process_compare(e.test) if type(e.test) == Compare else self.process_bool_op(e.test)}) {{{N + yo + N}}}"
+            return f"if ({self.process_compare(e.test) if type(e.test) == Compare else self.process_bool_op(e.test)}) {{{N + yo + N}}} {orelse}"
 
     @pre_hook_wrapper
     @post_hook_wrapper
