@@ -136,8 +136,7 @@ class Hooks:
 
         args = loc.get('args')
         self.current_code_context = ""
-        if args:
-            self.print_code(args)
+        #if args: self.print_code(args)
 
     def post_hook(self, loc):
         #print("POST HOOK", loc['func'].__name__, loc['args'][0], loc)
