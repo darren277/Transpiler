@@ -1,6 +1,22 @@
 # TODO
 
+## Testing
 
+### Unit Tests
+
+Run `pytest` from the CLI.
+
+### Full Rendering Tests
+
+#### Regular Syntax
+
+Run `make test` for regular JS syntax testing.
+
+#### JSX
+
+Run `make test-jsx` for JSX syntax testing (and actual React component rendering).
+
+Or, alternatively, navigate to the `tests/testout/jsx` directory and run `npm run start` to see the rendered React components in the browser.
 
 ## The semicolon problem
 
