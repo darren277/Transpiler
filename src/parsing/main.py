@@ -48,11 +48,10 @@ class Visitor:
     def process_body(self, body: BodyType, cls: bool = False, constructor: bool = False) -> str:
         s = ''
         for node in body:
-            if constructor == True:
+            if constructor == True and self.config.react_app:
                 s += 'super(props)\n'
             s += self.process_statement(node, cls=cls)
-            if len(s) > 0:
-                s += '\n'
+            #if len(s) > 0: s += '\n'
         return s
 
     def process_left(self, left) -> str:
@@ -284,8 +283,10 @@ class Visitor:
 
     def process_set(self, s) -> str:
         result = self.config.set_sep.join([self.process_arg(el) for el in s.elts])
-        if self.config.set_wrapper and not self.config.react_app:
+        if len(self.config.set_wrapper) > 0 and not self.config.react_app:
             return f"new Set({self.config.set_wrapper[0]}{result}{self.config.set_wrapper[1]})"
+        elif not self.config.react_app:
+            return f"new Set([{result}])"
         elif self.config.react_app:
             return f"{{{result}}}"
         else:
@@ -337,7 +338,7 @@ class Visitor:
 
     @return_func
     def process_return(self, r) -> str:
-        if not self.config.wrap_return:
+        if not self.config.wrap_return or len(self.config.wrap_return) == 0:
             wrap_return_left = ''
             wrap_return_right = ''
         else:
@@ -547,7 +548,8 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_while(self, e) -> str:
-        return f"while ({self.process_compare(e.test)}) {{{N.join([self.process_statement(s) for s in e.body])}}}"
+        test = self.process_compare(e.test) if type(e.test) == Compare else self.process_arg(e.test)
+        return f"while ({test}) {{{N.join([self.process_statement(s) for s in e.body])}}}"
 
     @pre_hook_wrapper
     @post_hook_wrapper
@@ -589,10 +591,16 @@ class Visitor:
     def process_if(self, e: ast.If) -> str:
         yo = N.join([self.process_statement(exp) for exp in e.body]) if type(e.body) == list else self.process_statement(e.body)
         self.direct_parent = ('conditional', None)
+
+        orelse = ""
+
+        if e.orelse:
+            orelse = f"else {{\n{self.process_statement(e.orelse)}\n}}"
+
         if type(e.test) == Name:
-            return f"if ({e.test.id}) {{{N + yo + N}}}"
+            return f"if ({e.test.id}) {{{N + yo + N}}} {orelse}"
         else:
-            return f"if ({self.process_compare(e.test) if type(e.test) == Compare else self.process_bool_op(e.test)}) {{{N + yo + N}}}"
+            return f"if ({self.process_compare(e.test) if type(e.test) == Compare else self.process_bool_op(e.test)}) {{{N + yo + N}}} {orelse}"
 
     @pre_hook_wrapper
     @post_hook_wrapper
@@ -663,7 +671,7 @@ class Visitor:
         ## TODO: decorators = "\n".join([f"@{self.process_statement(decorator)}" for decorator in func.decorator_list]) if func.decorator_list else ""
 
         func_name = 'constructor' if func.name == '__init__' else func.name
-        if func_name == 'constructor' and 'props' not in arg_string:
+        if func_name == 'constructor' and 'props' not in arg_string and self.config.react_app:
             arg_string = 'props'
 
         func_prefix = '' if cls or self.direct_parent[0] == 'cls' else 'function '
