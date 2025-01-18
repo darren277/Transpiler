@@ -2,7 +2,10 @@
 from settings import LOG_FILE
 
 class ASTConfig:
-    def __init__(self, assign: str = 'let', wrap_return: str = "()", tuples_in_curly_braces: bool = True, tuples_in_square_brackets: bool = False, debug: bool = False, log_file: str = LOG_FILE):
+    def __init__(self, assign: str = 'let', wrap_return: str = "", tuples_in_curly_braces: bool = True, tuples_in_square_brackets: bool = False,
+                 debug: bool = False, log_file: str = LOG_FILE, react_app: bool = False):
+        self.react_app = react_app
+
         self.assign = assign
         self.wrap_return = wrap_return
         self.tuples_in_curly_braces = tuples_in_curly_braces
