@@ -37,3 +37,23 @@ def test_process_bool_op():
     expected = 'true && false || true'
     assert main.process_bool_op(arg) == expected
 
+
+def test_parse_import():
+    main = Main('')
+
+    main.parse_import("import os")
+    assert main.import_lines[0] == 'import "os"'
+
+    main.parse_import("from db import DbController")
+    assert main.import_lines[1] == 'import { DbController } from "db"'
+
+    main.parse_import("from settings import *")
+    assert main.import_lines[2] == 'import * as settings from "settings"'
+
+    main.parse_import("from db import DbController, DbModel")
+    assert main.import_lines[3] == 'import { DbController, DbModel } from "db"'
+
+    i = main.add_other_imports()
+    assert i == 'import "os"\nimport { DbController } from "db"\nimport * as settings from "settings"\nimport { DbController, DbModel } from "db"'
+
+
