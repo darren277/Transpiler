@@ -122,9 +122,9 @@ class Visitor:
         if type(arg) == ast.Constant:
             return self.process_arg(arg)
         if type(arg.op) == Or:
-            return f"{self.process_statement(arg.values[0])} {OR} {self.process_statement(arg.values[1])}"
+            return f' {OR} '.join([self.process_statement(val) for val in arg.values])
         elif type(arg.op) == And:
-            return f"{self.process_statement(arg.values[0])} {AND} {self.process_statement(arg.values[1])}"
+            return f' {AND} '.join([self.process_statement(val) for val in arg.values])
         elif type(arg.op) == Not:
             return f"{NOT} {self.process_statement(arg.operand)}"
         else:
