@@ -153,7 +153,7 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_attribute_call(self, call: ast.Call, s: str = "") -> str:
-        if call.func.value.id == 'self':
+        if hasattr(call.func.value, 'id') and call.func.value.id == 'self':
             call.func.value.id = 'this'
         try:
             call_func = call.func
