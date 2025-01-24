@@ -9,25 +9,33 @@ from jsbeautifier import beautify
 
 class Visitor:
     def parse_import(self, line: str):
-        # TODO: Why not actually parse these lines with the actual ast parser library, lol?
-        # You use it for literally everything else.
-        if line.startswith('from'):
-            # from special_types import var, const, let, ternary
-            actual_line = line.replace('from ', '').split(' import ')
-            source = actual_line[0].replace('src.react', 'react')
-            components = actual_line[1]
-        else:
-            line = line.replace('._import._from', '')
-            components, source = line.split(' = ')
+        def convert_to_ast(line):
+            return ast.parse(line).body[0]
 
-        separated_components = components.split(', ')
-        source = source.replace('.', '/')
-        source = f'"{source}"'
+        l = convert_to_ast(line)
 
-        for component in separated_components:
-            self.imported_components.append(component)
+        def process_alias(a, curly_braces=False, dq=True, module=None):
+            if a.name == '*':
+                return f'{a.name} as {module}'
+            else: L, R = ('{ ', ' }') if curly_braces else ('"', '"') if dq else ('', '')
+            if type(a) == alias:
+                if a.asname: return f'{a.name} as "{a.asname}"'
+            return f'{L}{a.name}{R}'
 
-        self.import_lines.append(f"import {{{components}}} from {source};")
+        names = l.names
+
+        if type(l) == Import:
+            s = f"import {', '.join([process_alias(a) for a in names])}"
+
+        if type(l) == ImportFrom:
+            if len(names) == 1:
+                s = f"import {', '.join([process_alias(a, curly_braces=True, module=l.module) for a in names])} from \"{l.module}\""
+            else:
+                s = f"import {{ {', '.join([process_alias(a, curly_braces=False, dq=False) for a in names])} }} from \"{l.module}\""
+
+        self.import_lines.append(s)
+        return s
+
 
     def transpile(self, linting_options: dict = None) -> str:
         s = self.process_body(self.ast.body)
@@ -114,9 +122,9 @@ class Visitor:
         if type(arg) == ast.Constant:
             return self.process_arg(arg)
         if type(arg.op) == Or:
-            return f"{self.process_statement(arg.values[0])} {OR} {self.process_statement(arg.values[1])}"
+            return f' {OR} '.join([self.process_statement(val) for val in arg.values])
         elif type(arg.op) == And:
-            return f"{self.process_statement(arg.values[0])} {AND} {self.process_statement(arg.values[1])}"
+            return f' {AND} '.join([self.process_statement(val) for val in arg.values])
         elif type(arg.op) == Not:
             return f"{NOT} {self.process_statement(arg.operand)}"
         else:
@@ -145,7 +153,7 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_attribute_call(self, call: ast.Call, s: str = "") -> str:
-        if call.func.value.id == 'self':
+        if hasattr(call.func.value, 'id') and call.func.value.id == 'self':
             call.func.value.id = 'this'
         try:
             call_func = call.func

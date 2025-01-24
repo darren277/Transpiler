@@ -11,3 +11,10 @@ test: activate
 
 test-jsx: activate
 	python tests/jsx_tests.py
+
+
+test:
+	pytest
+
+cov:
+	pytest --cov=. --cov-report=term-missing

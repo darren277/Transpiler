@@ -138,6 +138,13 @@ class Hooks:
         self.current_code_context = ""
         #if args: self.print_code(args)
 
+        if self.config.do_print_code == True and args and len(args) > 0:
+            try:
+                self.print_code(args)
+            except AttributeError as e:
+                if "object has no attribute 'lineno'" in str(e):
+                    print("Attribute error in print_code")
+
     def post_hook(self, loc):
         #print("POST HOOK", loc['func'].__name__, loc['args'][0], loc)
         ...
@@ -145,7 +152,7 @@ class Hooks:
     def print_code(self, args):
         if not args:
             print("Nothing here", type(args), args)
-            raise Exception("Guh?")
+            #raise Exception("Guh?")
         elif type(args) == list or type(args) == tuple:
             for i in range(len(args)):
                 self.print_code(args[i])

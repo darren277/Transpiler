@@ -3,7 +3,7 @@ from settings import LOG_FILE
 
 class ASTConfig:
     def __init__(self, assign: str = 'let', wrap_return: str = "", tuples_in_curly_braces: bool = True, tuples_in_square_brackets: bool = False,
-                 debug: bool = False, log_file: str = LOG_FILE, react_app: bool = False):
+                 debug: bool = False, log_file: str = LOG_FILE, react_app: bool = False, do_print_code: bool = False):
         self.react_app = react_app
 
         self.assign = assign
@@ -47,6 +47,8 @@ class ASTConfig:
         self.tuples_in_square_brackets = tuples_in_square_brackets
 
         self.log_file = log_file
+
+        self.do_print_code = do_print_code
 
     def update(self, config_kwargs: dict):
         for key, val in config_kwargs.items():
