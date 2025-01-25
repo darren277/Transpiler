@@ -110,8 +110,9 @@ class Visitor:
             Starred: lambda a: f"**{a.value.id}"
         }
         if type(a) == BinOp:
-            if type(a.op) == Mult:
-                return self.process_bin_op(a)
+            if type(a.op) == Mult: return self.process_bin_op(a)
+            # These do the same thing. Not sure why I added the Mult case specifically.
+            # Leaving it in for now in case it was for some anticipated edge case.
             return self.process_bin_op(a)
         else:
             return case_switch.get(type(a), lambda a: self.throw(f"NOT YET IMPLEMENTED: {type(a)}"))(a)
