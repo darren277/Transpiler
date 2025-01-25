@@ -385,3 +385,30 @@ def test_dict_key():
     expected = '1'
     assert result == expected
 
+
+def test_set():
+    from main import Main
+    main = Main('')
+    import ast
+    s = ast.Set(elts=[ast.Constant(value=1), ast.Constant(value=2), ast.Constant(value=3)])
+
+    main.config.set_wrapper = '[]'
+    main.config.react_app = False
+
+    result = main.process_set(s)
+    expected = 'new Set([1,2,3])'
+    assert result == expected
+
+    main.config.set_wrapper = '{}'
+    main.config.react_app = False
+
+    result = main.process_set(s)
+    expected = 'new Set({1,2,3})'
+    assert result == expected
+
+    main.config.set_wrapper = ''
+    main.config.react_app = True
+
+    result = main.process_set(s)
+    expected = '{1,2,3}'
+    assert result == expected
