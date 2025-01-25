@@ -17,6 +17,10 @@ class ASTConfig:
         self.assign = 'var'
         self.assign = 'let'
 
+        self.NOT = '!'
+        self.AND = '&&'
+        self.OR = '||'
+
         #self.wrap_return = "()"
         self.wrap_return = wrap_return
         self.list_sep = ", "
