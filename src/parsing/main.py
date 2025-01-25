@@ -505,7 +505,7 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_assert(self, a: ast.Assert) -> str:
-        return f"console.assert({self.process_compare(a.test)}, '{self.process_compare(a.test)}')"
+        return f"console.assert({self.process_arg(a.test)}, '{self.process_arg(a.test)}')"
 
     def process_list_comp(self, e) -> str:
         if len(e.generators) > 1: raise Exception("TODO: Multiple generators in list comprehension...")
