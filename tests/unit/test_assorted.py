@@ -177,3 +177,38 @@ def test_attribute_call():
         result = None
 
     assert result == None
+
+
+def test_cls():
+    from main import Main
+
+    main = Main('')
+
+    import ast
+
+    cls = ast.ClassDef(name='MyClass', bases=[], keywords=[], body=[])
+    result = main.process_cls(cls)
+    expected = 'class MyClass {}'
+    assert result == expected
+
+
+    cls = ast.ClassDef(name='MyClass', bases=[ast.Name(id='MyBase', ctx=ast.Load()), ast.Name(id='MySecondBase', ctx=ast.Load())], keywords=[], body=[])
+
+    try:
+        result = main.process_cls(cls)
+    except Exception as e:
+        assert str(e) == "JS does not handle multiple inheritence like this. You must define a mixin yourself."
+        result = None
+
+    assert result == None
+
+
+    cls = ast.ClassDef(name='MyClass', bases=[ast.Attribute(value=ast.Name(id='MyBase', ctx=ast.Load()), attr='log', ctx=ast.Load())], keywords=[], body=[])
+    result = main.process_cls(cls)
+    expected = 'class MyClass extends MyBase.log {}'
+    assert result == expected
+
+    cls = ast.ClassDef(name='MyClass', bases=[ast.Attribute(value=ast.Name(id='MyBase', ctx=ast.Load()), attr='log', ctx=ast.Load())], keywords=[], body=[ast.FunctionDef(name='__init__', args=ast.arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[]), body=[], decorator_list=[])])
+    result = main.process_cls(cls)
+    expected = 'class MyClass extends MyBase.log {constructor () {  }}'
+    assert result == expected
