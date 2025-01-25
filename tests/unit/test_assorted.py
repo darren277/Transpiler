@@ -538,3 +538,35 @@ def test_subscript():
     expected = 'my_func()[my_func()]'
     assert result == expected
 
+
+def test_return():
+    from main import Main
+    main = Main('')
+    import ast
+
+    r = ast.Return(value=ast.Constant(value=1))
+    result = main.process_return(r)
+    expected = 'return 1'
+    assert result == expected
+
+    r = ast.Return(value=None)
+    main.config.debug = True
+    result = main.process_return(r)
+    expected = 'return '
+    assert result == expected
+
+    main.config.wrap_return = ['(', ')']
+    r = ast.Return(value=ast.Constant(value=1))
+    result = main.process_return(r)
+    expected = 'return (1)'
+    assert result == expected
+
+    # if type(expr) == Tuple: raise Exception(f"TODO: Return of {str(expr)}")
+    r = ast.Return(value=ast.Tuple(elts=[ast.Constant(value=1), ast.Constant(value=2)]))
+    try:
+        result = main.process_return(r)
+    except Exception as e:
+        assert str(e) == "TODO: Return of (1, 2)"
+        result = None
+
+    assert result == None
