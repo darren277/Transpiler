@@ -521,3 +521,20 @@ def test_assert():
     result = main.process_assert(a)
     expected = 'console.assert(true, \'true\')'
     assert result == expected
+
+
+def test_subscript():
+    from main import Main
+    main = Main('')
+    import ast
+
+    e = ast.Subscript(value=ast.Name(id='x', ctx=ast.Load()), slice=ast.Index(value=ast.Name(id='y', ctx=ast.Load())), ctx=ast.Load())
+    result = main.process_subscript(e)
+    expected = 'x[y]'
+    assert result == expected
+
+    e = ast.Subscript(value=ast.Call(func=ast.Name(id='my_func', ctx=ast.Load()), args=[], keywords=[]), slice=ast.Index(value=ast.Call(func=ast.Name(id='my_func', ctx=ast.Load()), args=[], keywords=[])), ctx=ast.Load())
+    result = main.process_subscript(e)
+    expected = 'my_func()[my_func()]'
+    assert result == expected
+
