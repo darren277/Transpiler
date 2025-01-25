@@ -532,8 +532,8 @@ class Visitor:
         except_block = self.process_body(t.handlers)
         finally_string = ""
         if t.orelse:
-            raise Exception("TODO: Implement else block for try/except")
             else_block = self.process_body(t.orelse)
+            raise Exception("TODO: Implement else block for try/except")
         if t.finalbody:
             finally_block = self.process_body(t.finalbody)
             finally_string = f"\nfinally {{{N+finally_block}}}"
