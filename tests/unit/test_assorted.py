@@ -103,3 +103,10 @@ def test_utils():
     from utils import debug_util
 
     assert debug_util('console.log("Hello, World!")') == None
+
+
+def test_more():
+    main = Main('print("Hello, World!")')
+
+    main.transpile(linting_options=dict(test=True))
+
