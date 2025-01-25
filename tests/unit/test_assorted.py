@@ -135,3 +135,17 @@ def test_bool_op():
     print('result.....', result)
     expected = '!true'
     assert result == expected
+
+
+def test_attribute():
+    from main import Main
+
+    main = Main('')
+
+    import ast
+    # value == Call
+    arg = ast.Attribute(value=ast.Call(func=ast.Name(id='my_func', ctx=ast.Load()), args=[], keywords=[]), attr='log', ctx=ast.Load())
+    result = main.process_attribute(arg)
+    expected = 'my_func()'
+    assert result == expected
+
