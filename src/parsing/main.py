@@ -141,9 +141,8 @@ class Visitor:
             #if self.config.debug: print(f"{body.value} IS A NAME... NO RECURSION...")
             v = body.value.id
             s = self.config._self + s if v == 'self' else v + s
-        else:
-            #if self.config.debug: print("NOW RECURSING...")
-            s = self.process_attribute(body.value, s) + s
+        # if self.config.debug: print("NOW RECURSING...")
+        # DOES THIS CASE EVER OCCUR? s = self.process_attribute(body.value, s) + s
         s += "." + last_attr
         return s
 
