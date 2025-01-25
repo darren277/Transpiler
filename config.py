@@ -27,7 +27,7 @@ class ASTConfig:
         self.set_sep = ","
         #self.set_wrapper = "[]"
         self.set_wrapper = ""
-        self.dict_sep = ","
+        self.dict_sep = ", "
         self.dict_wrapper = "{}"
         self.tuple_sep = ","
         self.tuple_wrapper = "[]"
