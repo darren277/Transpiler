@@ -212,3 +212,33 @@ def test_cls():
     result = main.process_cls(cls)
     expected = 'class MyClass extends MyBase.log {constructor () {  }}'
     assert result == expected
+
+
+def test_funcdef_arg():
+    from main import Main
+
+    main = Main('')
+
+    import ast
+
+    a = ast.arg(arg='x', annotation=None)
+    result = main.process_funcdef_arg(a)
+    expected = 'x'
+    assert result == expected
+
+    a = ast.arg(arg='x', annotation=ast.Name(id='int', ctx=ast.Load()))
+    result = main.process_funcdef_arg(a)
+    expected = 'x: int'
+    assert result == expected
+
+    a = ast.arg(arg='x', annotation=ast.Name(id='int', ctx=ast.Load()))
+    result = main.process_funcdef_arg(a, default=ast.Constant(value=1))
+    expected = 'x: int = 1'
+    assert result == expected
+
+    main.config.react_app = True
+    a = ast.arg(arg='props', annotation=None)
+    result = main.process_funcdef_arg(a)
+    expected = '{props}'
+    assert result == expected
+
