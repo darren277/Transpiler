@@ -242,3 +242,17 @@ def test_funcdef_arg():
     expected = '{props}'
     assert result == expected
 
+
+def test_lambda():
+    from main import Main
+
+    main = Main('')
+
+    import ast
+
+    # special case for longer lambdas...
+    l = ast.Lambda(args=ast.arguments(args=[ast.arg(arg='x', annotation=None)], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[]), body=ast.BinOp(left=ast.Name(id='x', ctx=ast.Load()), op=ast.Add(), right=ast.Constant(value=1)))
+    result = main.process_lambda(l)
+    expected = 'x => x + 1'
+    assert result == expected
+
