@@ -334,3 +334,28 @@ def test_except():
 
     expected = ''
     assert result == expected
+
+
+def test_try():
+    from main import Main
+    main = Main('')
+    import ast
+    t = ast.Try(body=[], handlers=[], orelse=[], finalbody=[])
+    result = main.process_try(t)
+    expected = 'try {}\ncatch (e) {}'
+    assert result == expected
+
+    t = ast.Try(body=[], handlers=[ast.ExceptHandler(type=ast.Name(id='Exception', ctx=ast.Load()), name='e', body=[])], orelse=[], finalbody=[])
+    result = main.process_try(t)
+    expected = 'try {}\ncatch (e) {}'
+    assert result == expected
+
+    # t.orelse...
+    t = ast.Try(body=[], handlers=[], orelse=[ast.Expr(value=ast.Call(func=ast.Name(id='console.log', ctx=ast.Load()), args=[ast.Constant(value='Hello, World!')], keywords=[]))], finalbody=[])
+    try:
+        result = main.process_try(t)
+    except Exception as e:
+        assert str(e) == "TODO: Implement else block for try/except"
+        result = None
+
+    assert result == None
