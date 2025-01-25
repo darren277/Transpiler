@@ -149,3 +149,15 @@ def test_attribute():
     expected = 'my_func()'
     assert result == expected
 
+
+def test_chained_call():
+    from main import Main
+
+    main = Main('')
+
+    import ast
+    arg = ast.Call(func=ast.Name(id='my_func', ctx=ast.Load()), args=[], keywords=[])
+    result = main.process_chained_call(arg)
+    expected = 'my_func()'
+    assert result == expected
+
