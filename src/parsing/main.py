@@ -653,7 +653,7 @@ class Visitor:
     @post_hook_wrapper
     def process_ternary(self, *args) -> str:
         if len(args) != 3:
-            raise Exception("TERNARY BROKE")
+            raise Exception("Ternary operator must have 3 arguments.")
         else:
             self.inside_custom_ternary = True
             arg1, arg2, arg3 = [self.process_arg(arg) for arg in args]
