@@ -305,3 +305,13 @@ def test_if():
     result = main.process_if(e)
     expected = 'if (x) {\n\n} '
     assert result == expected
+
+
+def test_call():
+    from main import Main
+    main = Main('')
+    import ast
+    c = ast.Call(func=ast.Call(func=ast.Name(id='my_func', ctx=ast.Load()), args=[], keywords=[]), args=[], keywords=[])
+    result = main.process_call(c)
+    expected = 'my_func()()'
+    assert result == expected
