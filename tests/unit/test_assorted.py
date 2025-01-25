@@ -294,3 +294,14 @@ def test_bin_op():
     result = main.process_bin_op(body, special_long_lambda_case=True)
     expected = 'x  1'
     assert result == expected
+
+
+def test_if():
+    # e.test == ast.Name
+    from main import Main
+    main = Main('')
+    import ast
+    e = ast.If(test=ast.Name(id='x', ctx=ast.Load()), body=[], orelse=[])
+    result = main.process_if(e)
+    expected = 'if (x) {\n\n} '
+    assert result == expected
