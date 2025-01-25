@@ -256,3 +256,41 @@ def test_lambda():
     expected = 'x => x + 1'
     assert result == expected
 
+
+def test_bin_op():
+    from main import Main
+
+    main = Main('')
+
+    import ast
+
+    body = ast.BinOp(left=ast.Name(id='x', ctx=ast.Load()), op=ast.Add(), right=ast.Constant(value=1))
+    result = main.process_bin_op(body)
+    expected = 'x + 1'
+    assert result == expected
+
+    body = ast.BinOp(left=ast.Name(id='x', ctx=ast.Load()), op=ast.Add(), right=ast.BinOp(left=ast.Name(id='y', ctx=ast.Load()), op=ast.Add(), right=ast.Constant(value=1)))
+    result = main.process_bin_op(body)
+    expected = 'x + (y + 1)'
+    assert result == expected
+
+    body = ast.BinOp(left=ast.Name(id='x', ctx=ast.Load()), op=ast.Add(), right=ast.BinOp(left=ast.Name(id='y', ctx=ast.Load()), op=ast.Add(), right=ast.Constant(value=1)))
+    result = main.process_bin_op(body, double_and=True)
+    expected = 'x && (y + 1)'
+    assert result == expected
+
+    body = ast.BinOp(left=ast.Name(id='x', ctx=ast.Load()), op=ast.Add(), right=ast.BinOp(left=ast.Name(id='y', ctx=ast.Load()), op=ast.Add(), right=ast.Constant(value=1)))
+    result = main.process_bin_op(body, special_long_lambda_case=True)
+    expected = 'x + (y + 1)'
+    assert result == expected
+
+    body = ast.BinOp(left=ast.Name(id='x', ctx=ast.Load()), op=ast.FloorDiv(), right=ast.Constant(value=1))
+    result = main.process_bin_op(body)
+    expected = 'Math.floor(x / 1)'
+    assert result == expected
+
+    # if special_long_lambda_case and (op != '+') and (op != '-') and (op != '*') and (op != '/') and (op != '//'):
+    body = ast.BinOp(left=ast.Name(id='x', ctx=ast.Load()), op=ast.Pow(), right=ast.Constant(value=1))
+    result = main.process_bin_op(body, special_long_lambda_case=True)
+    expected = 'x  1'
+    assert result == expected
