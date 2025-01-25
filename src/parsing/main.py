@@ -280,8 +280,7 @@ class Visitor:
             # NOTE: You have the option to wrap this in double quotes or even single quotes if desired.
             # TODO: Consider if wrapping in double quotes should be the default unless otherwise specified?
             return key
-        else:
-            breakpoint()
+        # Does this ever happen? else: breakpoint()
 
     def process_dict(self, d) -> str:
         dict_body = self.config.dict_sep.join([f"{self.process_dict_key(key)}: {self.process_arg(val)}" for key, val in zip(d.keys, d.values)])
@@ -295,8 +294,7 @@ class Visitor:
             return f"new Set([{result}])"
         elif self.config.react_app:
             return f"{{{result}}}"
-        else:
-            raise Exception("process_set() case not yet implemented.")
+        # Does this ever happen? else: raise Exception("process_set() case not yet implemented.")
 
     def process_list(self, l) -> str:
         result = self.config.list_sep.join([self.process_statement(el) for el in l.elts])
@@ -443,10 +441,8 @@ class Visitor:
         try:
             return f"{e.value.id}[{e.slice.id}]"
         except:
-            try:
-                return f"{self.process_statement(e.value)}[{self.process_statement(e.slice)}]"
-            except:
-                raise Exception("NOT YET IMPLEMENTED FOR SUBSCRIPT...")
+            return f"{self.process_statement(e.value)}[{self.process_statement(e.slice)}]"
+            # This can't happen can it? except: raise Exception("NOT YET IMPLEMENTED FOR SUBSCRIPT...")
 
     def process_name(self, e) -> str:
         return e.id
@@ -621,6 +617,7 @@ class Visitor:
         left = f"({self.process_left(body.left)})" if type(body.left) == BinOp else self.process_left(body.left)
         right = f"({self.process_right(body.right)})" if type(body.right) == BinOp else self.process_left(body.right)
         if special_long_lambda_case and (op != '+') and (op != '-') and (op != '*') and (op != '/') and (op != '//'):
+            # What exactly is this case about?
             op = ''
             return f"{left} {op} {right}"
         else:
