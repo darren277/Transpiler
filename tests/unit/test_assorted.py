@@ -412,3 +412,40 @@ def test_set():
     result = main.process_set(s)
     expected = '{1,2,3}'
     assert result == expected
+
+
+def test_for_loop():
+    from main import Main
+    main = Main('')
+    import ast
+    f = ast.For(target=ast.Name(id='x', ctx=ast.Store()), iter=ast.Call(func=ast.Name(id='range', ctx=ast.Load()), args=[ast.Constant(value=10)], keywords=[]), body=[ast.Expr(value=ast.Call(func=ast.Name(id='console.log', ctx=ast.Load()), args=[ast.Name(id='x', ctx=ast.Load())], keywords=[]))], orelse=[])
+    result = main.process_for_loop(f)
+    expected = 'for (let x = 0; x < 10; x++) {console.log(x)} '
+    assert result == expected
+
+    f = ast.For(target=ast.Name(id='x', ctx=ast.Store()), iter=ast.Call(func=ast.Name(id='range', ctx=ast.Load()), args=[ast.Constant(value=10), ast.Constant(value=20)], keywords=[]), body=[ast.Expr(value=ast.Call(func=ast.Name(id='console.log', ctx=ast.Load()), args=[ast.Name(id='x', ctx=ast.Load())], keywords=[]))], orelse=[])
+    result = main.process_for_loop(f)
+    expected = 'for (let x = 20; x < 10; x++) {console.log(x)} '
+    assert result == expected
+
+    f = ast.For(target=ast.Name(id='x', ctx=ast.Store()), iter=ast.Call(func=ast.Name(id='range', ctx=ast.Load()), args=[ast.Constant(value=10), ast.Constant(value=20), ast.Constant(value=2)], keywords=[]), body=[ast.Expr(value=ast.Call(func=ast.Name(id='console.log', ctx=ast.Load()), args=[ast.Name(id='x', ctx=ast.Load())], keywords=[]))], orelse=[])
+    result = main.process_for_loop(f)
+    expected = 'for (let x = 20; x < 10; x+=2) {console.log(x)} '
+    assert result == expected
+
+
+    # if type(_iter) == Constant or len(_iter.args) == 1:
+    f = ast.For(target=ast.Name(id='x', ctx=ast.Store()), iter=ast.Constant(value=10), body=[ast.Expr(value=ast.Call(func=ast.Name(id='console.log', ctx=ast.Load()), args=[ast.Name(id='x', ctx=ast.Load())], keywords=[]))], orelse=[])
+    result = main.process_for_loop(f)
+    expected = 'for (let x = 0; x < 10; x++) {console.log(x)} '
+    assert result == expected
+
+    # if type(_iter) != Constant and _iter.func.id != 'range':
+    f = ast.For(target=ast.Name(id='x', ctx=ast.Store()), iter=ast.Call(func=ast.Name(id='my_func', ctx=ast.Load()), args=[], keywords=[]), body=[ast.Expr(value=ast.Call(func=ast.Name(id='console.log', ctx=ast.Load()), args=[ast.Name(id='x', ctx=ast.Load())], keywords=[]))], orelse=[])
+    try:
+        result = main.process_for_loop(f)
+    except Exception as e:
+        assert str(e) == "NOT YET IMPLEMENTED"
+        result = None
+
+    assert result == None
