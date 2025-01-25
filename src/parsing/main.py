@@ -171,16 +171,14 @@ class Visitor:
             elif type(call.func.value) == List:
                 print("Yes, you can chain functions to lists in JS.")
                 s = self.process_list(call.func.value) + s
-            else:
-                ## NOTE: You should not be passing an attribute to the following function...
-                ## if type(call.func.value) == Attribute: breakpoint()
-                s = self.process_attribute_call(call.func.value, s) + s
-        elif type(call.func) == Call:
-            raise Exception("Hmmm....")
+            ## NOTE: You should not be passing an attribute to the following function...
+            ## if type(call.func.value) == Attribute: breakpoint()
+            # Does this case still ever occur naturally?
+            # s = self.process_attribute_call(call.func.value, s) + s
+        # And what about this one? elif type(call.func) == Call: raise Exception("Hmmm....")
         last_call = self.process_named_call(call)
         s += last_call if (type(call.func) == Name) or (type(call.func) == Call) else "." + last_call
-        if s.startswith('.'):
-            breakpoint()
+        # And what about this one as well? if s.startswith('.'): breakpoint()
         return s
 
     def is_already_defined(self, function_name: str) -> bool:
