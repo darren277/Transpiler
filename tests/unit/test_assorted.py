@@ -315,3 +315,22 @@ def test_call():
     result = main.process_call(c)
     expected = 'my_func()()'
     assert result == expected
+
+
+#     def process_except(self, e: ast.ExceptHandler) -> str:
+#         # logger.warn...
+#         if e.type:
+#             print(f"WARNING: In JS you need to handle specific error types (i.e. {e.type.id}) internally inside the `catch` block.")
+
+def test_except():
+    from main import Main
+    main = Main('')
+    import ast
+    e = ast.ExceptHandler(type=ast.Name(id='Exception', ctx=ast.Load()), name='e', body=[])
+    result = main.process_except(e)
+
+    # Should print a warning...
+    # TODO: How to test that?
+
+    expected = ''
+    assert result == expected
