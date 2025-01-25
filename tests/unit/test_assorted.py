@@ -110,3 +110,28 @@ def test_more():
 
     main.transpile(linting_options=dict(test=True))
 
+
+def test_bool_op():
+    from main import Main
+
+    main = Main('')
+
+    import ast
+    arg = ast.BoolOp(op=ast.And(), values=[ast.NameConstant(value=True), ast.NameConstant(value=False)])
+    result = main.process_bool_op(arg)
+    expected = 'true && false'
+    assert result == expected
+
+
+    # OR, AND, NOT
+
+    arg = ast.BoolOp(op=ast.Or(), values=[ast.NameConstant(value=True), ast.NameConstant(value=False)])
+    result = main.process_bool_op(arg)
+    expected = 'true || false'
+    assert result == expected
+
+    arg = ast.BoolOp(op=ast.Not(), values=[ast.NameConstant(value=True)])
+    result = main.process_bool_op(arg)
+    print('result.....', result)
+    expected = '!true'
+    assert result == expected
