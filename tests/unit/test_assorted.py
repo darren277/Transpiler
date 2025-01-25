@@ -161,3 +161,19 @@ def test_chained_call():
     expected = 'my_func()'
     assert result == expected
 
+
+def test_attribute_call():
+    from main import Main
+
+    main = Main('')
+
+    import ast
+
+    try:
+        arg = ast.Constant(value='Hello, World!')
+        result = main.process_attribute_call(arg)
+    except Exception as e:
+        assert str(e) == "You're passing something in that is not an actual call... check your if else chain directly below..."
+        result = None
+
+    assert result == None
