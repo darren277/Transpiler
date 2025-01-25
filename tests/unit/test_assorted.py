@@ -449,3 +449,65 @@ def test_for_loop():
         result = None
 
     assert result == None
+
+
+def test_assign():
+    from main import Main
+    main = Main('')
+    import ast
+
+    e = ast.Assign(targets=[ast.Name(id='x', ctx=ast.Store())], value=ast.Constant(value=1))
+    result = main.process_assign(e)
+    expected = 'let x = 1'
+    assert result == expected
+
+    e = ast.Assign(targets=[ast.Name(id='x', ctx=ast.Store())], value=ast.Call(func=ast.Name(id='my_func', ctx=ast.Load()), args=[], keywords=[]))
+    main.defined_functions.append('my_func')
+    result = main.process_assign(e)
+    expected = 'let x = my_func()'
+    assert result == expected
+
+    e = ast.Assign(targets=[ast.Name(id='x', ctx=ast.Store())], value=ast.Call(func=ast.Name(id='ternary', ctx=ast.Load()), args=[ast.Constant(value=True), ast.Constant(value='yes'), ast.Constant(value='no')], keywords=[]))
+    result = main.process_assign(e)
+    expected = 'let x = true ? "yes" : "no"'
+    assert result == expected
+
+    e = ast.Assign(targets=[ast.Name(id='x', ctx=ast.Store())], value=ast.Call(func=ast.Name(id='dict', ctx=ast.Load()), args=[], keywords=[ast.keyword(arg='a', value=ast.Constant(value=1)), ast.keyword(arg='b', value=ast.Constant(value=2))]))
+    result = main.process_assign(e)
+    expected = 'let x = {a: 1, b: 2}'
+    assert result == expected
+
+    # var, const, let
+    e = ast.Assign(targets=[ast.Name(id='x', ctx=ast.Store())], value=ast.Call(func=ast.Name(id='var', ctx=ast.Load()), args=[ast.Constant(value=1)], keywords=[]))
+    result = main.process_assign(e)
+    expected = 'var x = 1'
+    assert result == expected
+
+    e = ast.Assign(targets=[ast.Name(id='x', ctx=ast.Store())], value=ast.Call(func=ast.Name(id='const', ctx=ast.Load()), args=[ast.Constant(value=1)], keywords=[]))
+    result = main.process_assign(e)
+    expected = 'const x = 1'
+    assert result == expected
+
+    e = ast.Assign(targets=[ast.Name(id='x', ctx=ast.Store())], value=ast.Call(func=ast.Name(id='let', ctx=ast.Load()), args=[ast.Constant(value=1)], keywords=[]))
+    result = main.process_assign(e)
+    expected = 'let x = 1'
+    assert result == expected
+
+    # IfExp
+    e = ast.Assign(targets=[ast.Name(id='x', ctx=ast.Store())], value=ast.IfExp(test=ast.Constant(value=True), body=ast.Constant(value='yes'), orelse=ast.Constant(value='no')))
+    result = main.process_assign(e)
+    expected = 'let x = true ? "yes" : "no"'
+    assert result == expected
+
+    # Augment (like x //= 2)
+    e = ast.AugAssign(target=ast.Name(id='x', ctx=ast.Store()), op=ast.FloorDiv(), value=ast.Constant(value=2))
+    result = main.process_assign(e, augment=True)
+    expected = 'x = Math.floor(x / 2)'
+    assert result == expected
+
+    # this in target...
+    e = ast.Assign(targets=[ast.Name(id='this', ctx=ast.Store())], value=ast.Constant(value=1))
+    result = main.process_assign(e)
+    expected = 'this = 1'
+    assert result == expected
+
