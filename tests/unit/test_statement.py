@@ -37,7 +37,14 @@ def test_functiondef_statement():
         # return None
         body=[ast.Return(value=ast.Constant(value=1))]
     )
-    result = Main('').process_statement(funcdef)
+    main = Main('')
+
+    # TODO: Figure out why this seems to be shared across all instances of `Main()`.
+    main.config.react_app = False
+    main.config.wrap_return = ""
+
+    result = main.process_statement(funcdef)
+
     print(jsbeautifier.beautify(result))
     expected = """
 function test () {
