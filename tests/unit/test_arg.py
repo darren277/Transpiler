@@ -59,3 +59,17 @@ def test_constant_arg():
     print(result)
     expected = '"x"'
     assert_beautified(result, expected)
+
+
+def test_process_bin_op():
+    arg = ast.BinOp(left=ast.Constant(value=1), op=ast.Mult(), right=ast.Constant(value=2))
+    result = Main('').process_arg(arg)
+    expected = '1 * 2'
+    assert_beautified(result, expected)
+
+    # type(a.op) != Mult
+    arg = ast.BinOp(left=ast.Constant(value=1), op=ast.Add(), right=ast.Constant(value=2))
+    result = Main('').process_arg(arg)
+    expected = '1 + 2'
+    assert_beautified(result, expected)
+

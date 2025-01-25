@@ -9,25 +9,33 @@ from jsbeautifier import beautify
 
 class Visitor:
     def parse_import(self, line: str):
-        # TODO: Why not actually parse these lines with the actual ast parser library, lol?
-        # You use it for literally everything else.
-        if line.startswith('from'):
-            # from special_types import var, const, let, ternary
-            actual_line = line.replace('from ', '').split(' import ')
-            source = actual_line[0].replace('src.react', 'react')
-            components = actual_line[1]
-        else:
-            line = line.replace('._import._from', '')
-            components, source = line.split(' = ')
+        def convert_to_ast(line):
+            return ast.parse(line).body[0]
 
-        separated_components = components.split(', ')
-        source = source.replace('.', '/')
-        source = f'"{source}"'
+        l = convert_to_ast(line)
 
-        for component in separated_components:
-            self.imported_components.append(component)
+        def process_alias(a, curly_braces=False, dq=True, module=None):
+            if a.name == '*':
+                return f'{a.name} as {module}'
+            else: L, R = ('{ ', ' }') if curly_braces else ('"', '"') if dq else ('', '')
+            if type(a) == alias:
+                if a.asname: return f'{a.name} as "{a.asname}"'
+            return f'{L}{a.name}{R}'
 
-        self.import_lines.append(f"import {{{components}}} from {source};")
+        names = l.names
+
+        if type(l) == Import:
+            s = f"import {', '.join([process_alias(a) for a in names])}"
+
+        if type(l) == ImportFrom:
+            if len(names) == 1:
+                s = f"import {', '.join([process_alias(a, curly_braces=True, module=l.module) for a in names])} from \"{l.module}\""
+            else:
+                s = f"import {{ {', '.join([process_alias(a, curly_braces=False, dq=False) for a in names])} }} from \"{l.module}\""
+
+        self.import_lines.append(s)
+        return s
+
 
     def transpile(self, linting_options: dict = None) -> str:
         s = self.process_body(self.ast.body)
@@ -102,26 +110,26 @@ class Visitor:
             Starred: lambda a: f"**{a.value.id}"
         }
         if type(a) == BinOp:
-            if type(a.op) == Mult:
-                return self.process_bin_op(a)
+            if type(a.op) == Mult: return self.process_bin_op(a)
+            # These do the same thing. Not sure why I added the Mult case specifically.
+            # Leaving it in for now in case it was for some anticipated edge case.
             return self.process_bin_op(a)
         else:
             return case_switch.get(type(a), lambda a: self.throw(f"NOT YET IMPLEMENTED: {type(a)}"))(a)
 
     @pre_hook_wrapper
     @post_hook_wrapper
-    def process_bool_op(self, arg: ast.BoolOp) -> str:
+    def process_bool_op(self, arg: ast.BoolOp or ast.Constant) -> str:
         if type(arg) == ast.Constant:
             return self.process_arg(arg)
         if type(arg.op) == Or:
-            return f"{self.process_statement(arg.values[0])} {OR} {self.process_statement(arg.values[1])}"
+            return f' {self.config.OR} '.join([self.process_statement(val) for val in arg.values])
         elif type(arg.op) == And:
-            return f"{self.process_statement(arg.values[0])} {AND} {self.process_statement(arg.values[1])}"
+            return f' {self.config.AND} '.join([self.process_statement(val) for val in arg.values])
         elif type(arg.op) == Not:
-            return f"{NOT} {self.process_statement(arg.operand)}"
-        else:
-            breakpoint()
-            raise Exception("BoolOp and ternary...")
+            # Is there a possible case where this would be an array longer than 1?
+            return f"{self.config.NOT}{self.process_statement(arg.values[0])}"
+        # Does this ever really happen? breakpoint(); raise Exception("BoolOp and ternary...")
 
     @pre_hook_wrapper
     @post_hook_wrapper
@@ -133,9 +141,8 @@ class Visitor:
             #if self.config.debug: print(f"{body.value} IS A NAME... NO RECURSION...")
             v = body.value.id
             s = self.config._self + s if v == 'self' else v + s
-        else:
-            #if self.config.debug: print("NOW RECURSING...")
-            s = self.process_attribute(body.value, s) + s
+        # if self.config.debug: print("NOW RECURSING...")
+        # DOES THIS CASE EVER OCCUR? s = self.process_attribute(body.value, s) + s
         s += "." + last_attr
         return s
 
@@ -145,7 +152,8 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_attribute_call(self, call: ast.Call, s: str = "") -> str:
-        if call.func.value.id == 'self':
+        # TODO: This is messy.
+        if hasattr(call, 'func') and hasattr(call.func, 'value') and hasattr(call.func.value, 'id') and call.func.value.id == 'self':
             call.func.value.id = 'this'
         try:
             call_func = call.func
@@ -163,23 +171,21 @@ class Visitor:
             elif type(call.func.value) == List:
                 print("Yes, you can chain functions to lists in JS.")
                 s = self.process_list(call.func.value) + s
-            else:
-                ## NOTE: You should not be passing an attribute to the following function...
-                ## if type(call.func.value) == Attribute: breakpoint()
-                s = self.process_attribute_call(call.func.value, s) + s
-        elif type(call.func) == Call:
-            raise Exception("Hmmm....")
+            ## NOTE: You should not be passing an attribute to the following function...
+            ## if type(call.func.value) == Attribute: breakpoint()
+            # Does this case still ever occur naturally?
+            # s = self.process_attribute_call(call.func.value, s) + s
+        # And what about this one? elif type(call.func) == Call: raise Exception("Hmmm....")
         last_call = self.process_named_call(call)
         s += last_call if (type(call.func) == Name) or (type(call.func) == Call) else "." + last_call
-        if s.startswith('.'):
-            breakpoint()
+        # And what about this one as well? if s.startswith('.'): breakpoint()
         return s
 
     def is_already_defined(self, function_name: str) -> bool:
         return (function_name in self.imported_components) or (function_name in self.defined_classes) or (function_name in self.defined_functions)
 
     def is_react_component(self, function_name: str):
-        return (((function_name.lower == 'Fragment'.lower()) or (function_name.lower() in HTML_TAGS) or self.is_already_defined(function_name)))
+        return (((function_name.lower() == 'Fragment'.lower()) or (function_name.lower() in HTML_TAGS) or self.is_already_defined(function_name)))
 
     @pre_hook_wrapper
     @post_hook_wrapper
@@ -274,12 +280,11 @@ class Visitor:
             # NOTE: You have the option to wrap this in double quotes or even single quotes if desired.
             # TODO: Consider if wrapping in double quotes should be the default unless otherwise specified?
             return key
-        else:
-            breakpoint()
+        # Does this ever happen? else: breakpoint()
 
     def process_dict(self, d) -> str:
         dict_body = self.config.dict_sep.join([f"{self.process_dict_key(key)}: {self.process_arg(val)}" for key, val in zip(d.keys, d.values)])
-        return f"{self.config.dict_wrapper[0]} {dict_body} {self.config.dict_wrapper[1]}"
+        return f"{self.config.dict_wrapper[0]}{dict_body}{self.config.dict_wrapper[1]}"
 
     def process_set(self, s) -> str:
         result = self.config.set_sep.join([self.process_arg(el) for el in s.elts])
@@ -289,8 +294,7 @@ class Visitor:
             return f"new Set([{result}])"
         elif self.config.react_app:
             return f"{{{result}}}"
-        else:
-            raise Exception("process_set() case not yet implemented.")
+        # Does this ever happen? else: raise Exception("process_set() case not yet implemented.")
 
     def process_list(self, l) -> str:
         result = self.config.list_sep.join([self.process_statement(el) for el in l.elts])
@@ -319,7 +323,7 @@ class Visitor:
 
         _iter = f.iter
 
-        if type(_iter) == Constant or _iter.func.id == 'range':
+        if type(_iter) == Constant or (type(_iter) == Call and _iter.func.id == 'range'):
             t = self.process_target(f.target)
             if type(_iter) == Constant or len(_iter.args) == 1:
                 if type(_iter) == Constant: arg1 = _iter
@@ -331,7 +335,7 @@ class Visitor:
             elif len(_iter.args) == 3:
                 arg1, arg2, arg3 = _iter.args
                 arg3 = self.process_arg(arg3)
-                direction = '+' if arg3 >= 0 else '-'
+                direction = '+' if int(arg3) >= 0 else '-'
                 return f"for (let {t} = {self.process_arg(arg2)}; {t} {'<' if direction == '+' else '>'} {self.process_arg(arg1)}; {t}{direction}={arg3}) {{{self.process_body(f.body)}}} {orelse}"
         else:
             raise Exception("NOT YET IMPLEMENTED")
@@ -348,7 +352,8 @@ class Visitor:
         #if self.config.debug: print("RETURN", type(r), r)
         expr = r.value
         if type(expr) == Tuple:
-            raise Exception(f"TODO: Return of {str(expr)}")
+            tuple_body = ", ".join([self.process_statement(el) for el in expr.elts])
+            raise Exception(f"TODO: Return of ({tuple_body})")
         if expr == None:
             if self.config.debug: print("Function returns nothing.")
             expr = ""
@@ -437,10 +442,8 @@ class Visitor:
         try:
             return f"{e.value.id}[{e.slice.id}]"
         except:
-            try:
-                return f"{self.process_statement(e.value)}[{self.process_statement(e.slice)}]"
-            except:
-                raise Exception("NOT YET IMPLEMENTED FOR SUBSCRIPT...")
+            return f"{self.process_statement(e.value)}[{self.process_statement(e.slice)}]"
+            # This can't happen can it? except: raise Exception("NOT YET IMPLEMENTED FOR SUBSCRIPT...")
 
     def process_name(self, e) -> str:
         return e.id
@@ -502,7 +505,7 @@ class Visitor:
     @pre_hook_wrapper
     @post_hook_wrapper
     def process_assert(self, a: ast.Assert) -> str:
-        return f"console.assert({self.process_compare(a.test)}, '{self.process_compare(a.test)}')"
+        return f"console.assert({self.process_arg(a.test)}, '{self.process_arg(a.test)}')"
 
     def process_list_comp(self, e) -> str:
         if len(e.generators) > 1: raise Exception("TODO: Multiple generators in list comprehension...")
@@ -529,8 +532,8 @@ class Visitor:
         except_block = self.process_body(t.handlers)
         finally_string = ""
         if t.orelse:
-            raise Exception("TODO: Implement else block for try/except")
             else_block = self.process_body(t.orelse)
+            raise Exception("TODO: Implement else block for try/except")
         if t.finalbody:
             finally_block = self.process_body(t.finalbody)
             finally_string = f"\nfinally {{{N+finally_block}}}"
@@ -615,6 +618,7 @@ class Visitor:
         left = f"({self.process_left(body.left)})" if type(body.left) == BinOp else self.process_left(body.left)
         right = f"({self.process_right(body.right)})" if type(body.right) == BinOp else self.process_left(body.right)
         if special_long_lambda_case and (op != '+') and (op != '-') and (op != '*') and (op != '/') and (op != '//'):
+            # What exactly is this case about?
             op = ''
             return f"{left} {op} {right}"
         else:
@@ -649,7 +653,7 @@ class Visitor:
     @post_hook_wrapper
     def process_ternary(self, *args) -> str:
         if len(args) != 3:
-            raise Exception("TERNARY BROKE")
+            raise Exception("Ternary operator must have 3 arguments.")
         else:
             self.inside_custom_ternary = True
             arg1, arg2, arg3 = [self.process_arg(arg) for arg in args]
