@@ -352,7 +352,8 @@ class Visitor:
         #if self.config.debug: print("RETURN", type(r), r)
         expr = r.value
         if type(expr) == Tuple:
-            raise Exception(f"TODO: Return of {str(expr)}")
+            tuple_body = ", ".join([self.process_statement(el) for el in expr.elts])
+            raise Exception(f"TODO: Return of ({tuple_body})")
         if expr == None:
             if self.config.debug: print("Function returns nothing.")
             expr = ""
