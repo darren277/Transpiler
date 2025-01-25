@@ -284,7 +284,7 @@ class Visitor:
 
     def process_dict(self, d) -> str:
         dict_body = self.config.dict_sep.join([f"{self.process_dict_key(key)}: {self.process_arg(val)}" for key, val in zip(d.keys, d.values)])
-        return f"{self.config.dict_wrapper[0]} {dict_body} {self.config.dict_wrapper[1]}"
+        return f"{self.config.dict_wrapper[0]}{dict_body}{self.config.dict_wrapper[1]}"
 
     def process_set(self, s) -> str:
         result = self.config.set_sep.join([self.process_arg(el) for el in s.elts])
