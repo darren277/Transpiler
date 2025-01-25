@@ -119,18 +119,17 @@ class Visitor:
 
     @pre_hook_wrapper
     @post_hook_wrapper
-    def process_bool_op(self, arg: ast.BoolOp) -> str:
+    def process_bool_op(self, arg: ast.BoolOp or ast.Constant) -> str:
         if type(arg) == ast.Constant:
             return self.process_arg(arg)
         if type(arg.op) == Or:
-            return f' {OR} '.join([self.process_statement(val) for val in arg.values])
+            return f' {self.config.OR} '.join([self.process_statement(val) for val in arg.values])
         elif type(arg.op) == And:
-            return f' {AND} '.join([self.process_statement(val) for val in arg.values])
+            return f' {self.config.AND} '.join([self.process_statement(val) for val in arg.values])
         elif type(arg.op) == Not:
-            return f"{NOT} {self.process_statement(arg.operand)}"
-        else:
-            breakpoint()
-            raise Exception("BoolOp and ternary...")
+            # Is there a possible case where this would be an array longer than 1?
+            return f"{self.config.NOT}{self.process_statement(arg.values[0])}"
+        # Does this ever really happen? breakpoint(); raise Exception("BoolOp and ternary...")
 
     @pre_hook_wrapper
     @post_hook_wrapper
