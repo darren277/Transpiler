@@ -359,3 +359,29 @@ def test_try():
         result = None
 
     assert result == None
+
+
+def test_dict_key():
+    from main import Main
+    main = Main('')
+    import ast
+    key = ast.Constant(value='x')
+    result = main.process_dict_key(key)
+    expected = '"x"'
+    assert result == expected
+
+    key = ast.Name(id='x', ctx=ast.Load())
+    result = main.process_dict_key(key)
+    expected = 'x'
+    assert result == expected
+
+    key = 'x'
+    result = main.process_dict_key(key)
+    expected = 'x'
+    assert result == expected
+
+    key = ast.Constant(value=1)
+    result = main.process_dict_key(key)
+    expected = '1'
+    assert result == expected
+
