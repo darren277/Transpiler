@@ -323,7 +323,7 @@ class Visitor:
 
         _iter = f.iter
 
-        if type(_iter) == Constant or _iter.func.id == 'range':
+        if type(_iter) == Constant or (type(_iter) == Call and _iter.func.id == 'range'):
             t = self.process_target(f.target)
             if type(_iter) == Constant or len(_iter.args) == 1:
                 if type(_iter) == Constant: arg1 = _iter
