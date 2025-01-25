@@ -511,3 +511,13 @@ def test_assign():
     expected = 'this = 1'
     assert result == expected
 
+
+def test_assert():
+    from main import Main
+    main = Main('')
+    import ast
+
+    a = ast.Assert(test=ast.Constant(value=True))
+    result = main.process_assert(a)
+    expected = 'console.assert(true, \'true\')'
+    assert result == expected
