@@ -335,7 +335,7 @@ class Visitor:
             elif len(_iter.args) == 3:
                 arg1, arg2, arg3 = _iter.args
                 arg3 = self.process_arg(arg3)
-                direction = '+' if arg3 >= 0 else '-'
+                direction = '+' if int(arg3) >= 0 else '-'
                 return f"for (let {t} = {self.process_arg(arg2)}; {t} {'<' if direction == '+' else '>'} {self.process_arg(arg1)}; {t}{direction}={arg3}) {{{self.process_body(f.body)}}} {orelse}"
         else:
             raise Exception("NOT YET IMPLEMENTED")
