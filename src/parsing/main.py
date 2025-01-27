@@ -107,7 +107,9 @@ class Visitor:
 
             Subscript: lambda a: self.process_subscript(a),
 
-            Starred: lambda a: f"**{a.value.id}"
+            Starred: lambda a: f"**{a.value.id}",
+
+            ListComp: lambda a: '{' + self.process_list_comp(a) if wrap_string else self.process_list_comp(a),
         }
         if type(a) == BinOp:
             if type(a.op) == Mult: return self.process_bin_op(a)
@@ -529,7 +531,15 @@ class Visitor:
         if len(e.generators) > 1: raise Exception("TODO: Multiple generators in list comprehension...")
         if len(e.generators[0].ifs): raise Exception("TODO: If statements in list comprehension...")
         if e.generators[0].is_async: raise Exception("TODO: Async list comprehension...")
-        return f"({self.process_statement(e.elt)} for {e.generators[0].target.id} in {self.process_statement(e.generators[0].iter)})"
+
+        if type(e.elt) == Constant:
+            return f"({self.process_statement(e.elt)} for {e.generators[0].target.id} in {self.process_statement(e.generators[0].iter)})"
+        else:
+            body = self.process_statement(e.elt.body)
+            test = self.process_compare(e.elt.test) if type(e.elt.test) == Compare else self.process_arg(e.elt.test)
+            orelse = self.process_statement(e.elt.orelse)
+            elt = f"{{ if ({test}) {{ return ({body}) }} else {{ return ({orelse}) }} }}"
+            return f"{e.generators[0].iter.id}.map(({e.generators[0].target.id}) => {elt})"
 
     def process_dict_comp(self, e) -> str:
         if len(e.generators) > 1: raise Exception("TODO: Multiple generators in dict comprehension...")
