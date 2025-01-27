@@ -173,7 +173,7 @@ def test_attribute_call():
         arg = ast.Constant(value='Hello, World!')
         result = main.process_attribute_call(arg)
     except Exception as e:
-        assert str(e) == "You're passing something in that is not an actual call... check your if else chain directly below..."
+        assert str(e) == "Invalid call object - missing func attribute"
         result = None
 
     assert result == None
