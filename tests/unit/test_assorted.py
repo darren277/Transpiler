@@ -570,3 +570,64 @@ def test_return():
         result = None
 
     assert result == None
+
+
+def test_thing():
+    # UserService.getUsers().then(lambda res: setUsers(res.data)).catch(lambda err: console.log(err))
+
+    setUsers = ast.Lambda(
+        args=ast.arguments(
+            args=[ast.arg(arg='res', annotation=None)],
+            vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[]
+        ),
+        body=ast.Call(
+            func=ast.Name(id='setUsers', ctx=ast.Load()),
+            args=[ast.Attribute(value=ast.Name(id='res', ctx=ast.Load()), attr='data', ctx=ast.Load())],
+            keywords=[]
+        )
+    )
+
+    console_log = ast.Lambda(
+        args=ast.arguments(
+            args=[ast.arg(arg='err', annotation=None)],
+            vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[]
+        ),
+        body=ast.Call(
+            func=ast.Attribute(value=ast.Name(id='console', ctx=ast.Load()), attr='log', ctx=ast.Load()),
+            args=[ast.Name(id='err', ctx=ast.Load())],
+            keywords=[]
+        )
+    )
+
+    from main import Main
+
+    main = Main('')
+
+    # UserService.getUsers().then(lambda res: setUsers(res.data)).catch(lambda err: console.log(err))
+
+    result = main.process_attribute_call(
+        ast.Call(
+            func=ast.Attribute(
+                value=ast.Call(
+                    func=ast.Attribute(
+                        value=ast.Call(
+                            func=ast.Attribute(value=ast.Name(id='UserService', ctx=ast.Load()), attr='getUsers', ctx=ast.Load()),
+                            args=[],
+                            keywords=[]
+                        ),
+                        attr='then',
+                        ctx=ast.Load()
+                    ),
+                    args=[setUsers],
+                    keywords=[]
+                ),
+                attr='catch',
+                ctx=ast.Load()
+            ),
+            args=[console_log],
+            keywords=[]
+        )
+    )
+
+    expected = 'UserService.getUsers().then(res => setUsers(res.data)).catch(err => console.log(err))'
+    assert result == expected
