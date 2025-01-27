@@ -155,31 +155,49 @@ class Visitor:
         # TODO: This is messy.
         if hasattr(call, 'func') and hasattr(call.func, 'value') and hasattr(call.func.value, 'id') and call.func.value.id == 'self':
             call.func.value.id = 'this'
-        try:
-            call_func = call.func
-        except:
-            raise Exception("You're passing something in that is not an actual call... check your if else chain directly below...")
-        if type(call.func) == Attribute:
-            if type(call.func.value) == Name:
-                s = call.func.value.id + s
-            elif type(call.func.value) == JoinedStr:
-                s = self.process_joined_string(call.func.value) + s
-            elif type(call.func.value) == Attribute:
-                s = self.process_attribute(call.func.value) + s
-            elif type(call.func.value) == Subscript:
-                s = self.process_subscript(call.func.value) + s
-            elif type(call.func.value) == List:
-                print("Yes, you can chain functions to lists in JS.")
-                s = self.process_list(call.func.value) + s
-            ## NOTE: You should not be passing an attribute to the following function...
-            ## if type(call.func.value) == Attribute: breakpoint()
-            # Does this case still ever occur naturally?
-            # s = self.process_attribute_call(call.func.value, s) + s
-        # And what about this one? elif type(call.func) == Call: raise Exception("Hmmm....")
-        last_call = self.process_named_call(call)
-        s += last_call if (type(call.func) == Name) or (type(call.func) == Call) else "." + last_call
-        # And what about this one as well? if s.startswith('.'): breakpoint()
-        return s
+
+        # Ensure we have a valid call
+        if not hasattr(call, 'func'):
+            raise Exception("Invalid call object - missing func attribute")
+
+        # Process the function part of the call
+        if isinstance(call.func, ast.Attribute):
+            # Get the base value first (e.g., UserService.getUsers())
+            value_str = ""
+
+            if isinstance(call.func.value, ast.Call):
+                # Handle nested calls (e.g., getUsers().then())
+                value_str = self.process_attribute_call(call.func.value)
+            elif isinstance(call.func.value, ast.Name):
+                value_str = call.func.value.id
+            elif isinstance(call.func.value, ast.JoinedStr):
+                value_str = self.process_joined_string(call.func.value)
+            elif isinstance(call.func.value, ast.Attribute):
+                value_str = self.process_attribute(call.func.value)
+            elif isinstance(call.func.value, ast.Subscript):
+                value_str = self.process_subscript(call.func.value)
+            elif isinstance(call.func.value, ast.List):
+                value_str = self.process_list(call.func.value)
+
+            # Process the actual call with its arguments
+            call_str = self.process_named_call(call)
+
+            # Combine the parts
+            if value_str:
+                # If we have a value, add the method call with a dot
+                return f"{value_str}.{call_str}"
+            else:
+                # If no value (shouldn't happen), just return the call
+                return call_str
+
+        elif isinstance(call.func, ast.Call):
+            # Direct function calls
+            return self.process_named_call(call)
+        elif isinstance(call.func, ast.Name):
+            # Simple named function calls
+            return self.process_named_call(call)
+        else:
+            raise Exception(f"Unexpected function type in call: {type(call.func)}")
 
     def is_already_defined(self, function_name: str) -> bool:
         return (function_name in self.imported_components) or (function_name in self.defined_classes) or (function_name in self.defined_functions)
