@@ -631,3 +631,28 @@ def test_thing():
 
     expected = 'UserService.getUsers().then(res => setUsers(res.data)).catch(err => console.log(err))'
     assert result == expected
+
+
+def test_special_dict():
+    from main import Main
+
+    main = Main('')
+
+    import ast
+
+    # { **prev, [name]: value }
+    d = ast.Dict(
+        keys=[
+            ast.Starred(value=ast.Name(id='prev', ctx=ast.Load()), ctx=ast.Load()),
+            ast.Subscript(value=ast.Name(id='name', ctx=ast.Load()), slice=ast.Index(value=ast.Name(id='value', ctx=ast.Load())), ctx=ast.Load())
+        ],
+        values=[
+            ast.Constant(value=None),
+            ast.Name(id='value', ctx=ast.Load())
+        ]
+    )
+    result = main.process_dict(d)
+    expected = '{...prev, [name]: value}'
+    assert result == expected
+
+
