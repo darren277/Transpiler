@@ -253,6 +253,10 @@ class Visitor:
         if function_name == 'PURE_STRING':
             return call.args[0].value
 
+        if function_name == 'input_':
+            call.func.id = 'input'
+            function_name = 'input'
+
         args = call.args
         args_string = ''
         first_arg_id = None
