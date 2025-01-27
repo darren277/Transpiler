@@ -205,6 +205,7 @@ class Visitor:
         return (function_name in self.imported_components) or (function_name in self.defined_classes) or (function_name in self.defined_functions)
 
     def is_react_component(self, function_name: str):
+        if function_name in self.event_handlers: return False
         return (((function_name.lower() == 'Fragment'.lower()) or (function_name.lower() in HTML_TAGS) or self.is_already_defined(function_name)))
 
     @pre_hook_wrapper
@@ -742,3 +743,6 @@ class Visitor:
         self.direct_parent = ('cls', cls.name)
         body = self.process_body(cls.body, cls=True)
         return f"class {cls.name}{inherits} {{{body}}}"
+
+    def register_event_handler(self, handler: str):
+        self.event_handlers.append(handler)
