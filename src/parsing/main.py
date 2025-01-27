@@ -88,7 +88,7 @@ class Visitor:
             arg: lambda a: self.process_funcdef_arg(a),
             Call: lambda a: self.process_call(a),
             Name: lambda a: f'{{{a.id}}}' if wrap_string else a.id,
-            Attribute: lambda a: self.process_attribute(a),
+            Attribute: lambda a: '{' + self.process_attribute(a) + '}' if wrap_string else self.process_attribute(a),
 
             Constant: lambda a: '{' + self.process_constant(a) + '}' if wrap_string else self.process_constant(a),
 
@@ -107,7 +107,9 @@ class Visitor:
 
             Subscript: lambda a: self.process_subscript(a),
 
-            Starred: lambda a: f"**{a.value.id}"
+            Starred: lambda a: f"**{a.value.id}",
+
+            ListComp: lambda a: '{' + self.process_list_comp(a) + '}' if wrap_string else self.process_list_comp(a),
         }
         if type(a) == BinOp:
             if type(a.op) == Mult: return self.process_bin_op(a)
@@ -155,36 +157,55 @@ class Visitor:
         # TODO: This is messy.
         if hasattr(call, 'func') and hasattr(call.func, 'value') and hasattr(call.func.value, 'id') and call.func.value.id == 'self':
             call.func.value.id = 'this'
-        try:
-            call_func = call.func
-        except:
-            raise Exception("You're passing something in that is not an actual call... check your if else chain directly below...")
-        if type(call.func) == Attribute:
-            if type(call.func.value) == Name:
-                s = call.func.value.id + s
-            elif type(call.func.value) == JoinedStr:
-                s = self.process_joined_string(call.func.value) + s
-            elif type(call.func.value) == Attribute:
-                s = self.process_attribute(call.func.value) + s
-            elif type(call.func.value) == Subscript:
-                s = self.process_subscript(call.func.value) + s
-            elif type(call.func.value) == List:
-                print("Yes, you can chain functions to lists in JS.")
-                s = self.process_list(call.func.value) + s
-            ## NOTE: You should not be passing an attribute to the following function...
-            ## if type(call.func.value) == Attribute: breakpoint()
-            # Does this case still ever occur naturally?
-            # s = self.process_attribute_call(call.func.value, s) + s
-        # And what about this one? elif type(call.func) == Call: raise Exception("Hmmm....")
-        last_call = self.process_named_call(call)
-        s += last_call if (type(call.func) == Name) or (type(call.func) == Call) else "." + last_call
-        # And what about this one as well? if s.startswith('.'): breakpoint()
-        return s
+
+        # Ensure we have a valid call
+        if not hasattr(call, 'func'):
+            raise Exception("Invalid call object - missing func attribute")
+
+        # Process the function part of the call
+        if isinstance(call.func, ast.Attribute):
+            # Get the base value first (e.g., UserService.getUsers())
+            value_str = ""
+
+            if isinstance(call.func.value, ast.Call):
+                # Handle nested calls (e.g., getUsers().then())
+                value_str = self.process_attribute_call(call.func.value)
+            elif isinstance(call.func.value, ast.Name):
+                value_str = call.func.value.id
+            elif isinstance(call.func.value, ast.JoinedStr):
+                value_str = self.process_joined_string(call.func.value)
+            elif isinstance(call.func.value, ast.Attribute):
+                value_str = self.process_attribute(call.func.value)
+            elif isinstance(call.func.value, ast.Subscript):
+                value_str = self.process_subscript(call.func.value)
+            elif isinstance(call.func.value, ast.List):
+                value_str = self.process_list(call.func.value)
+
+            # Process the actual call with its arguments
+            call_str = self.process_named_call(call)
+
+            # Combine the parts
+            if value_str:
+                # If we have a value, add the method call with a dot
+                return f"{value_str}.{call_str}"
+            else:
+                # If no value (shouldn't happen), just return the call
+                return call_str
+
+        elif isinstance(call.func, ast.Call):
+            # Direct function calls
+            return self.process_named_call(call)
+        elif isinstance(call.func, ast.Name):
+            # Simple named function calls
+            return self.process_named_call(call)
+        else:
+            raise Exception(f"Unexpected function type in call: {type(call.func)}")
 
     def is_already_defined(self, function_name: str) -> bool:
         return (function_name in self.imported_components) or (function_name in self.defined_classes) or (function_name in self.defined_functions)
 
     def is_react_component(self, function_name: str):
+        if function_name in self.event_handlers: return False
         return (((function_name.lower() == 'Fragment'.lower()) or (function_name.lower() in HTML_TAGS) or self.is_already_defined(function_name)))
 
     @pre_hook_wrapper
@@ -232,6 +253,10 @@ class Visitor:
         if function_name == 'PURE_STRING':
             return call.args[0].value
 
+        if function_name == 'input_':
+            call.func.id = 'input'
+            function_name = 'input'
+
         args = call.args
         args_string = ''
         first_arg_id = None
@@ -259,20 +284,38 @@ class Visitor:
         if self.inside_return and self.is_react_component(function_name):
             # HTML TAG CASE or IMPORTED REACT COMPONENT CASE
             close1, close2 = ('/', '') if function_name.lower() in self.imported_components else ('', f'</{function_name}>')
+
+            # Special scenario for the `style` keyword argument...
+
             if content:
                 actual_contents = [kw.value for kw in kwargs if kw.arg == 'content'][0]
-                kwargs_string += ", ".join([f"{kw.arg}={self.process_arg(kw.value)}" for kw in kwargs if not kw.arg == 'content'])
+                kwargs_string += ", ".join([f"{kw.arg}={self.process_val(kw.value, style=True if kw.arg=='style' else False)}" for kw in kwargs if not kw.arg == 'content'])
                 return f"<{function_name}{kwargs_string.replace(', ', ' ')}{close1}>{self.process_statement(actual_contents)}{close2}"
             else:
-                kwargs_string += ", ".join([f"{kw.arg}={{{self.process_arg(kw.value)}}}" for kw in kwargs])
+                kwargs_string += ", ".join([f"{kw.arg}={{{self.process_val(kw.value, style=True if kw.arg=='style' else False)}}}" for kw in kwargs])
+                print("DEBUG KWARGS:", kwargs_string)
                 if "True" in kwargs_string:
                     kwargs_string = kwargs_string.replace('="True"', '')
                 return f"<{function_name}{kwargs_string.replace(', ', ' ')}{close1}>{args_string}{close2}"
         else:
             return f"{function_name}({args_string}{kwargs_string})"
 
+    def process_val(self, value, style: bool = False):
+        if not style: return self.process_arg(value)
+        else:
+            if len(value.keys) > 1:
+                return '{' + ', '.join([f'"{key.value}": {self.process_arg(val)}' for key, val in zip(value.keys, value.values)]) + '}'
+            else:
+                return self.process_arg(value)
+
     def process_dict_key(self, key) -> str:
+        if type(key) == Starred:
+            return f"...{key.value.id}"
+        if type(key) == List:
+            return f"[{', '.join([self.process_arg(el) for el in key.elts])}]"
         if type(key) == Constant:
+            if key.value == None:
+                return ''
             return self.process_constant(key)
         elif hasattr(key, 'id'):
             return key.id
@@ -280,10 +323,31 @@ class Visitor:
             # NOTE: You have the option to wrap this in double quotes or even single quotes if desired.
             # TODO: Consider if wrapping in double quotes should be the default unless otherwise specified?
             return key
+        elif type(key) == Subscript:
+            return f'[{key.value.id}]'
         # Does this ever happen? else: breakpoint()
 
     def process_dict(self, d) -> str:
-        dict_body = self.config.dict_sep.join([f"{self.process_dict_key(key)}: {self.process_arg(val)}" for key, val in zip(d.keys, d.values)])
+        entries = []
+
+        if len(d.keys) != len(d.values):
+            raise Exception("Seriously!? This is a thing?")
+
+        for key, value in zip(d.keys, d.values):
+            processed_value = self.process_arg(value)
+
+            if isinstance(key, ast.Starred):
+                entries.append(self.process_dict_key(key))
+            elif not key:
+                entries.append(processed_value)
+            elif isinstance(key, ast.Constant) and str(key.value) == 'Ellipsis':
+                entries.append(f'...{processed_value}')
+            else:
+                processed_key = self.process_dict_key(key)
+                entries.append(f"{processed_key}: {processed_value}")
+
+        dict_body = self.config.dict_sep.join(entries)
+
         return f"{self.config.dict_wrapper[0]}{dict_body}{self.config.dict_wrapper[1]}"
 
     def process_set(self, s) -> str:
@@ -494,6 +558,8 @@ class Visitor:
 
             Assert: lambda e: self.process_assert(e),
 
+            Starred: lambda e: f"...{e.value.id}",
+
             Pass: lambda e: ''
         }
         s = case_switch.get(e_type, lambda e: self.throw(f"NOT YET IMPLEMENTED: {e_type}"))(e)
@@ -511,7 +577,15 @@ class Visitor:
         if len(e.generators) > 1: raise Exception("TODO: Multiple generators in list comprehension...")
         if len(e.generators[0].ifs): raise Exception("TODO: If statements in list comprehension...")
         if e.generators[0].is_async: raise Exception("TODO: Async list comprehension...")
-        return f"({self.process_statement(e.elt)} for {e.generators[0].target.id} in {self.process_statement(e.generators[0].iter)})"
+
+        if type(e.elt) == Constant:
+            return f"({self.process_statement(e.elt)} for {e.generators[0].target.id} in {self.process_statement(e.generators[0].iter)})"
+        else:
+            body = self.process_statement(e.elt.body)
+            test = self.process_compare(e.elt.test) if type(e.elt.test) == Compare else self.process_arg(e.elt.test)
+            orelse = self.process_statement(e.elt.orelse)
+            elt = f"{{ if ({test}) {{ return ({body}) }} else {{ return ({orelse}) }} }}"
+            return f"{e.generators[0].iter.id}.map(({e.generators[0].target.id}) => {elt})"
 
     def process_dict_comp(self, e) -> str:
         if len(e.generators) > 1: raise Exception("TODO: Multiple generators in dict comprehension...")
@@ -637,6 +711,13 @@ class Visitor:
             body_string = self.process_bin_op(body, special_long_lambda_case=True)
         else:
             body_string = self.process_statement(body)
+
+        ## Do we want to differentially render longer (multi statement) bodies from simpler ones?
+        ## TODO: What is the optimal way to determine this in the first place?
+        ## For now, let's force curly braces and a return statement for all Lambdas...
+
+        body_string = f"{{ return {self.config.wrap_return[0]}{body_string}{self.config.wrap_return[1]} }}"
+
         return f"{args_string} => {body_string}" if len(args.args) == 1 else f"({args_string}) => {body_string}"
 
     @pre_hook_wrapper
@@ -714,3 +795,6 @@ class Visitor:
         self.direct_parent = ('cls', cls.name)
         body = self.process_body(cls.body, cls=True)
         return f"class {cls.name}{inherits} {{{body}}}"
+
+    def register_event_handler(self, handler: str):
+        self.event_handlers.append(handler)

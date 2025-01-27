@@ -5,6 +5,8 @@ HTML_TAGS = [
     'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
     'nav', 'header', 'footer', 'main', 'section',
     'a', 'img', 'video', 'audio', 'iframe', 'canvas',
+    'table', 'thead', 'tbody', 'tr', 'th', 'td',
+    'input_', 'input', 'form', 'label', 'select', 'option',
     'route'
 ]
 

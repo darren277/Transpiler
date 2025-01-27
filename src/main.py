@@ -40,3 +40,5 @@ class Code:
         self.defined_classes = []
         self.defined_functions = []
 
+        self.event_handlers = []
+

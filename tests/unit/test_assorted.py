@@ -173,7 +173,7 @@ def test_attribute_call():
         arg = ast.Constant(value='Hello, World!')
         result = main.process_attribute_call(arg)
     except Exception as e:
-        assert str(e) == "You're passing something in that is not an actual call... check your if else chain directly below..."
+        assert str(e) == "Invalid call object - missing func attribute"
         result = None
 
     assert result == None
@@ -570,3 +570,123 @@ def test_return():
         result = None
 
     assert result == None
+
+
+def test_thing():
+    # UserService.getUsers().then(lambda res: setUsers(res.data)).catch(lambda err: console.log(err))
+
+    setUsers = ast.Lambda(
+        args=ast.arguments(
+            args=[ast.arg(arg='res', annotation=None)],
+            vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[]
+        ),
+        body=ast.Call(
+            func=ast.Name(id='setUsers', ctx=ast.Load()),
+            args=[ast.Attribute(value=ast.Name(id='res', ctx=ast.Load()), attr='data', ctx=ast.Load())],
+            keywords=[]
+        )
+    )
+
+    console_log = ast.Lambda(
+        args=ast.arguments(
+            args=[ast.arg(arg='err', annotation=None)],
+            vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[]
+        ),
+        body=ast.Call(
+            func=ast.Attribute(value=ast.Name(id='console', ctx=ast.Load()), attr='log', ctx=ast.Load()),
+            args=[ast.Name(id='err', ctx=ast.Load())],
+            keywords=[]
+        )
+    )
+
+    from main import Main
+
+    main = Main('')
+
+    # UserService.getUsers().then(lambda res: setUsers(res.data)).catch(lambda err: console.log(err))
+
+    result = main.process_attribute_call(
+        ast.Call(
+            func=ast.Attribute(
+                value=ast.Call(
+                    func=ast.Attribute(
+                        value=ast.Call(
+                            func=ast.Attribute(value=ast.Name(id='UserService', ctx=ast.Load()), attr='getUsers', ctx=ast.Load()),
+                            args=[],
+                            keywords=[]
+                        ),
+                        attr='then',
+                        ctx=ast.Load()
+                    ),
+                    args=[setUsers],
+                    keywords=[]
+                ),
+                attr='catch',
+                ctx=ast.Load()
+            ),
+            args=[console_log],
+            keywords=[]
+        )
+    )
+
+    expected = 'UserService.getUsers().then(res => setUsers(res.data)).catch(err => console.log(err))'
+    assert result == expected
+
+
+def test_special_dict():
+    from main import Main
+
+    main = Main('')
+
+    import ast
+
+    # { **prev, [name]: value }
+    d = ast.Dict(
+        keys=[
+            ast.Starred(value=ast.Name(id='prev', ctx=ast.Load()), ctx=ast.Load()),
+            ast.Subscript(value=ast.Name(id='name', ctx=ast.Load()), slice=ast.Index(value=ast.Name(id='value', ctx=ast.Load())), ctx=ast.Load())
+        ],
+        values=[
+            ast.Constant(value=None),
+            ast.Name(id='value', ctx=ast.Load())
+        ]
+    )
+    result = main.process_dict(d)
+    expected = '{...prev, [name]: value}'
+    assert result == expected
+
+
+    # NOTE: As a string, the following actually gets transpiled differently than what I expected here...
+    # { **prev, [name]: value }
+
+    # (Pdb) print(body.keys)
+    # [None, <ast.List object at 0x000002320CAA4910>]
+    # (Pdb) print(body.values)
+    # [<ast.Name object at 0x000002320CAA48B0>, <ast.Name object at 0x000002320CAA4880>]
+
+
+    # Ok, let's get creative then...
+    # {...: prev, [name]: value}
+    s = '{...: prev, [name]: value}'
+    temp_main = Main(s)
+    d = temp_main.transpile()
+    print(d)
+    assert jsbeautifier.beautify(d) == jsbeautifier.beautify('{...prev, [name]: value}')
+
+
+    d = ast.Dict(
+        keys=[
+            ast.Constant(value=...),
+            ast.Subscript(value=ast.Name(id='name', ctx=ast.Load()), slice=ast.Index(value=ast.Name(id='value', ctx=ast.Load())), ctx=ast.Load())
+        ],
+        values=[
+            ast.Name(id='prev', ctx=ast.Load()),
+            ast.Name(id='value', ctx=ast.Load())
+        ]
+    )
+
+    result = main.process_dict(d)
+    expected = '{...prev, [name]: value}'
+    assert result == expected
+
+
