@@ -519,6 +519,8 @@ class Visitor:
 
             Assert: lambda e: self.process_assert(e),
 
+            Starred: lambda e: f"...{e.value.id}",
+
             Pass: lambda e: ''
         }
         s = case_switch.get(e_type, lambda e: self.throw(f"NOT YET IMPLEMENTED: {e_type}"))(e)
