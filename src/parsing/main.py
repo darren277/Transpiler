@@ -284,17 +284,29 @@ class Visitor:
         if self.inside_return and self.is_react_component(function_name):
             # HTML TAG CASE or IMPORTED REACT COMPONENT CASE
             close1, close2 = ('/', '') if function_name.lower() in self.imported_components else ('', f'</{function_name}>')
+
+            # Special scenario for the `style` keyword argument...
+
             if content:
                 actual_contents = [kw.value for kw in kwargs if kw.arg == 'content'][0]
-                kwargs_string += ", ".join([f"{kw.arg}={self.process_arg(kw.value)}" for kw in kwargs if not kw.arg == 'content'])
+                kwargs_string += ", ".join([f"{kw.arg}={self.process_val(kw.value, style=True if kw.arg=='style' else False)}" for kw in kwargs if not kw.arg == 'content'])
                 return f"<{function_name}{kwargs_string.replace(', ', ' ')}{close1}>{self.process_statement(actual_contents)}{close2}"
             else:
-                kwargs_string += ", ".join([f"{kw.arg}={{{self.process_arg(kw.value)}}}" for kw in kwargs])
+                kwargs_string += ", ".join([f"{kw.arg}={{{self.process_val(kw.value, style=True if kw.arg=='style' else False)}}}" for kw in kwargs])
+                print("DEBUG KWARGS:", kwargs_string)
                 if "True" in kwargs_string:
                     kwargs_string = kwargs_string.replace('="True"', '')
                 return f"<{function_name}{kwargs_string.replace(', ', ' ')}{close1}>{args_string}{close2}"
         else:
             return f"{function_name}({args_string}{kwargs_string})"
+
+    def process_val(self, value, style: bool = False):
+        if not style: return self.process_arg(value)
+        else:
+            if len(value.keys) > 1:
+                return '{' + ', '.join([f'"{key.value}": {self.process_arg(val)}' for key, val in zip(value.keys, value.values)]) + '}'
+            else:
+                return self.process_arg(value)
 
     def process_dict_key(self, key) -> str:
         if type(key) == Starred:
