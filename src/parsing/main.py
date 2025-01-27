@@ -297,7 +297,11 @@ class Visitor:
             return f"{function_name}({args_string}{kwargs_string})"
 
     def process_dict_key(self, key) -> str:
+        if type(key) == Starred:
+            return f"...{key.value.id}"
         if type(key) == Constant:
+            if key.value == None:
+                return ''
             return self.process_constant(key)
         elif hasattr(key, 'id'):
             return key.id
@@ -305,10 +309,27 @@ class Visitor:
             # NOTE: You have the option to wrap this in double quotes or even single quotes if desired.
             # TODO: Consider if wrapping in double quotes should be the default unless otherwise specified?
             return key
+        elif type(key) == Subscript:
+            return f'[{key.value.id}]'
         # Does this ever happen? else: breakpoint()
 
     def process_dict(self, d) -> str:
-        dict_body = self.config.dict_sep.join([f"{self.process_dict_key(key)}: {self.process_arg(val)}" for key, val in zip(d.keys, d.values)])
+        entries = []
+
+        if len(d.keys) != len(d.values):
+            raise Exception("Seriously!? This is a thing?")
+
+        for key, value in zip(d.keys, d.values):
+            processed_value = self.process_arg(value)
+
+            if isinstance(key, ast.Starred):
+                entries.append(self.process_dict_key(key))
+            else:
+                processed_key = self.process_dict_key(key)
+                entries.append(f"{processed_key}: {processed_value}")
+
+        dict_body = self.config.dict_sep.join(entries)
+
         return f"{self.config.dict_wrapper[0]}{dict_body}{self.config.dict_wrapper[1]}"
 
     def process_set(self, s) -> str:
