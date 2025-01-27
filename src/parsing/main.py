@@ -109,7 +109,7 @@ class Visitor:
 
             Starred: lambda a: f"**{a.value.id}",
 
-            ListComp: lambda a: '{' + self.process_list_comp(a) if wrap_string else self.process_list_comp(a),
+            ListComp: lambda a: '{' + self.process_list_comp(a) + '}' if wrap_string else self.process_list_comp(a),
         }
         if type(a) == BinOp:
             if type(a.op) == Mult: return self.process_bin_op(a)
