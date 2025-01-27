@@ -672,6 +672,13 @@ class Visitor:
             body_string = self.process_bin_op(body, special_long_lambda_case=True)
         else:
             body_string = self.process_statement(body)
+
+        ## Do we want to differentially render longer (multi statement) bodies from simpler ones?
+        ## TODO: What is the optimal way to determine this in the first place?
+        ## For now, let's force curly braces and a return statement for all Lambdas...
+
+        body_string = f"{{ return {self.config.wrap_return[0]}{body_string}{self.config.wrap_return[1]} }}"
+
         return f"{args_string} => {body_string}" if len(args.args) == 1 else f"({args_string}) => {body_string}"
 
     @pre_hook_wrapper
