@@ -299,6 +299,8 @@ class Visitor:
     def process_dict_key(self, key) -> str:
         if type(key) == Starred:
             return f"...{key.value.id}"
+        if type(key) == List:
+            return f"[{', '.join([self.process_arg(el) for el in key.elts])}]"
         if type(key) == Constant:
             if key.value == None:
                 return ''
@@ -324,6 +326,10 @@ class Visitor:
 
             if isinstance(key, ast.Starred):
                 entries.append(self.process_dict_key(key))
+            elif not key:
+                entries.append(processed_value)
+            elif isinstance(key, ast.Constant) and str(key.value) == 'Ellipsis':
+                entries.append(f'...{processed_value}')
             else:
                 processed_key = self.process_dict_key(key)
                 entries.append(f"{processed_key}: {processed_value}")

@@ -656,3 +656,37 @@ def test_special_dict():
     assert result == expected
 
 
+    # NOTE: As a string, the following actually gets transpiled differently than what I expected here...
+    # { **prev, [name]: value }
+
+    # (Pdb) print(body.keys)
+    # [None, <ast.List object at 0x000002320CAA4910>]
+    # (Pdb) print(body.values)
+    # [<ast.Name object at 0x000002320CAA48B0>, <ast.Name object at 0x000002320CAA4880>]
+
+
+    # Ok, let's get creative then...
+    # {...: prev, [name]: value}
+    s = '{...: prev, [name]: value}'
+    temp_main = Main(s)
+    d = temp_main.transpile()
+    print(d)
+    assert jsbeautifier.beautify(d) == jsbeautifier.beautify('{...prev, [name]: value}')
+
+
+    d = ast.Dict(
+        keys=[
+            ast.Constant(value=...),
+            ast.Subscript(value=ast.Name(id='name', ctx=ast.Load()), slice=ast.Index(value=ast.Name(id='value', ctx=ast.Load())), ctx=ast.Load())
+        ],
+        values=[
+            ast.Name(id='prev', ctx=ast.Load()),
+            ast.Name(id='value', ctx=ast.Load())
+        ]
+    )
+
+    result = main.process_dict(d)
+    expected = '{...prev, [name]: value}'
+    assert result == expected
+
+
