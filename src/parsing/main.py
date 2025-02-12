@@ -709,23 +709,63 @@ class Visitor:
 
     @pre_hook_wrapper
     @post_hook_wrapper
-    def process_lambda(self, l: ast.Lambda) -> str:
+    def process_lambda(self, l: ast.Lambda, is_event_handler: bool = False) -> str:
+        """
+        Process a lambda expression, with special handling for event handlers.
+
+        Args:
+            l: The lambda AST node
+            is_event_handler: Boolean indicating if this lambda is an event handler
+        """
         args, body = l.args, l.body
         args_string = ', '.join([str(arg.arg) for arg in args.args]) if args.args else ''
         self.direct_parent = ('lambda', None)
-        if type(body) == BinOp:
-            ## SPECIAL CASE FOR LONGER LAMBDAS IN PYTHON ##
+
+        # Process the body
+        if isinstance(body, ast.BinOp):
+            # Special case for longer lambdas in Python
             body_string = self.process_bin_op(body, special_long_lambda_case=True)
+        elif is_event_handler and isinstance(body, ast.Call):
+            # Special case for event handler lambdas with simple function calls
+            func_name = body.func.id if isinstance(body.func, ast.Name) else self.process_statement(body.func)
+            args_list = [self.process_statement(arg) for arg in body.args]
+            body_string = f"{func_name}({', '.join(args_list)})"
         else:
             body_string = self.process_statement(body)
 
-        ## Do we want to differentially render longer (multi statement) bodies from simpler ones?
-        ## TODO: What is the optimal way to determine this in the first place?
-        ## For now, let's force curly braces and a return statement for all Lambdas...
+        # Format the body based on complexity and type
+        if is_event_handler and isinstance(body, ast.Call):
+            # Simple event handler - no extra wrapping needed
+            body_wrapper = body_string
+        elif self.is_complex_body(body) and self.config.wrap_return:
+            # Complex body - use curly braces and return
+            body_wrapper = f"{{ return {self.config.wrap_return[0]}{body_string}{self.config.wrap_return[1]} }}"
+        elif isinstance(body, ast.Dict):
+            # Special case for lambdas that return a dictionary
+            body_wrapper = f"{{ return {body_string} }}"
+        else:
+            # Simple body - no curly braces needed
+            body_wrapper = body_string
 
-        body_string = f"{{ return {self.config.wrap_return[0]}{body_string}{self.config.wrap_return[1]} }}"
+        # Format the complete lambda
+        if len(args.args) == 1:
+            return f"{args_string} => {body_wrapper}"
+        else:
+            return f"({args_string}) => {body_wrapper}"
 
-        return f"{args_string} => {body_string}" if len(args.args) == 1 else f"({args_string}) => {body_string}"
+    def is_complex_body(self, body: ast.AST) -> bool:
+        """
+        Determine if a lambda body is complex enough to need curly braces and return.
+
+        Args:
+            body: The AST node representing the lambda body
+        """
+        # Add cases as needed for your specific requirements
+        return (
+                isinstance(body, (ast.BinOp, ast.IfExp)) or
+                (isinstance(body, ast.Call) and hasattr(body, 'keywords') and body.keywords) or
+                hasattr(body, 'body')  # Check for compound statements
+        )
 
     @pre_hook_wrapper
     @post_hook_wrapper
