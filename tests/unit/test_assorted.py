@@ -641,6 +641,8 @@ def test_special_dict():
 
     main = Main('')
 
+    main.config.react_app = False
+
     import ast
 
     # { **prev, [name]: value }
