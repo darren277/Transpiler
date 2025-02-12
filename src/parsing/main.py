@@ -528,7 +528,7 @@ class Visitor:
         e = statement
         e_type = type(e)
         case_switch = {
-            Assign: lambda e: self.process_assign(e),
+            Assign: lambda e: self.process_assign(e) + '\n',
             FunctionDef: lambda e: self.process_function(e, cls=cls),
             Expr: lambda e: self.process_statement(e.value),
             Call: lambda e: self.check_call(self.process_call(e)),
