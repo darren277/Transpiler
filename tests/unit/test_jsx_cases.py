@@ -1,6 +1,8 @@
 """"""
 import ast
 
+from jsbeautifier import beautify
+
 from main import Main
 
 
@@ -56,3 +58,20 @@ def App():
 
     # TODO: assert result == "import React from 'react';\n\nfunction render() {\n    return <Fragment><Component></Component></Fragment>\n}"
 
+
+def test_styles():
+    s = "def App(): return (div(p('Hello'), style={'display': 'flex', 'gap': '10px', 'marginBottom': '10px'}))"
+
+    main = Main(s)
+    main.config.react_app = True
+    main.config.wrap_return = "()"
+
+    main.inside_return = True
+
+    result = main.transpile()
+    print('result:', result)
+    assert beautify(result, opts=dict(e4x=True)) == beautify("""import React from 'react';\n\nfunction App() {return (<div style={{"display": "flex", "gap": "10px", "marginBottom": "10px"}}><p>{"Hello"}</p></div>)}\n\nexport default App;""", opts=dict(e4x=True))
+
+
+
+    ...
