@@ -349,14 +349,14 @@ class Visitor:
                 actual_contents = [kw.value for kw in kwargs if kw.arg == 'content'][0]
                 if 'style' in [kw.arg for kw in kwargs]: style = f" style={{{self.process_val([kw.value for kw in kwargs if kw.arg == 'style'][0], style=True)}}}"
                 kwargs_string += ", ".join([f"{kw.arg}={self.process_val(kw.value, style=True if kw.arg=='style' else False)}" for kw in kwargs if not kw.arg == 'content' and kw.arg != 'style'])
+                if "True" in kwargs_string or '{true}' in kwargs_string: kwargs_string = kwargs_string.replace('="True"', '').replace('={true}', '')
                 kw_string = kwargs_string.replace(', ', ' ')
                 if kw_string.endswith(' '): kw_string = kw_string[:-1]
                 return f"<{function_name}{style}{kw_string}{close1}>{self.process_statement(actual_contents)}{close2}"
             else:
                 kwargs_string += ", ".join([f"{kw.arg}={{{self.process_val(kw.value)}}}" for kw in kwargs if kw.arg != 'style'])
                 if 'style' in [kw.arg for kw in kwargs]: style = f" style={{{self.process_val([kw.value for kw in kwargs if kw.arg == 'style'][0], style=True)}}}"
-                if "True" in kwargs_string:
-                    kwargs_string = kwargs_string.replace('="True"', '')
+                if "True" in kwargs_string or '{true}' in kwargs_string: kwargs_string = kwargs_string.replace('="True"', '').replace('={true}', '')
                 kw_string = kwargs_string.replace(', ', ' ')
                 if kw_string.endswith(' '): kw_string = kw_string[:-1]
                 return f"<{function_name}{style}{kw_string}{close1}>{args_string}{close2}"
