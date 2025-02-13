@@ -514,6 +514,22 @@ def test_assign():
     expected = 'this = 1'
     assert result == expected
 
+    # let [users, addUser, editUser, deleteUser] = useUsers()
+    # vs...
+    # let [users, addUser, editUser, deleteUser] = new useUsers()
+
+    e = ast.Assign(targets=[ast.List(elts=[ast.Name(id='users', ctx=ast.Store()), ast.Name(id='addUser', ctx=ast.Store()), ast.Name(id='editUser', ctx=ast.Store()), ast.Name(id='deleteUser', ctx=ast.Store())], ctx=ast.Load())], value=ast.Call(func=ast.Name(id='useUsers', ctx=ast.Load()), args=[], keywords=[]))
+    result = main.process_assign(e)
+    expected = 'let [users, addUser, editUser, deleteUser] = new useUsers()'
+    assert result == expected
+
+    main.defined_functions.append('useUsers')
+
+    e = ast.Assign(targets=[ast.List(elts=[ast.Name(id='users', ctx=ast.Store()), ast.Name(id='addUser', ctx=ast.Store()), ast.Name(id='editUser', ctx=ast.Store()), ast.Name(id='deleteUser', ctx=ast.Store())], ctx=ast.Load())], value=ast.Call(func=ast.Name(id='useUsers', ctx=ast.Load()), args=[], keywords=[]))
+    result = main.process_assign(e)
+    expected = 'let [users, addUser, editUser, deleteUser] = useUsers()'
+    assert result == expected
+
 
 def test_assert():
     from main import Main
