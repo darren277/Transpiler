@@ -18,10 +18,12 @@ class Visitor:
 
         def process_alias(a, curly_braces=False, dq=True, module=None):
             if a.name == '*':
+                self.imported_components.append(module)
                 return f'{a.name} as {module}'
             else: L, R = ('{ ', ' }') if curly_braces else ('"', '"') if dq else ('', '')
             if type(a) == alias:
                 if a.asname: return f'{a.name} as "{a.asname}"'
+            self.imported_components.append(a.name)
             return f'{L}{a.name}{R}'
 
         def process_multiple_import_args(args):
@@ -49,6 +51,7 @@ class Visitor:
                     # Ex: import * as serviceWorker from './serviceWorker';
                     if _as and _from:
                         s = f"import * as {_as.value} from '{_from.value}'"
+                        self.imported_components.append(_as.value)
                     elif _from:
                         if type(_from) == Constant:
                             if len(l.value.args) > 1:
@@ -56,6 +59,7 @@ class Visitor:
                                 s = f"import {args} from '{_from.value}'"
                             else:
                                 s = f"import {l.value.args[0].value} from '{_from.value}'"
+                                self.imported_components.append(l.value.args[0].value)
                     else:
                         print("Hmmmm...")
                         breakpoint()
@@ -65,6 +69,7 @@ class Visitor:
                         s = f"import {args} from '{l.value.args[0].value}'"
                     else:
                         s = f"import '{l.value.args[0].value}'"
+                        self.imported_components.append(l.value.args[0].value)
             else:
                 raise Exception("NOT YET IMPLEMENTED [hint: parse_import()]")
         else:
