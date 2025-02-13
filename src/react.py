@@ -10,6 +10,10 @@ HTML_TAGS = [
     'route'
 ]
 
+HTML_TAGS += [
+    'App', 'React.StrictMode'
+]
+
 def div(*args, **kwargs): pass
 def ul(*args, **kwargs): pass
 def ol(*args, **kwargs): pass
