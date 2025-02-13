@@ -9,6 +9,8 @@ from jsbeautifier import beautify
 
 class Visitor:
     def parse_import(self, line: str):
+        # TODO: Definitely tidy this whole thing up a bit when you get the chance...
+
         def convert_to_ast(line):
             return ast.parse(line).body[0]
 
@@ -16,20 +18,74 @@ class Visitor:
 
         def process_alias(a, curly_braces=False, dq=True, module=None):
             if a.name == '*':
+                self.imported_components.append(module)
                 return f'{a.name} as {module}'
             else: L, R = ('{ ', ' }') if curly_braces else ('"', '"') if dq else ('', '')
             if type(a) == alias:
                 if a.asname: return f'{a.name} as "{a.asname}"'
+            self.imported_components.append(a.name)
             return f'{L}{a.name}{R}'
 
-        names = l.names
+        def process_multiple_import_args(args):
+            s = '{'
+            for arg in args:
+                if ' as ' in arg.value:
+                    p1, p2 = arg.value.split(' as ')
+                    s += f'{p1} as {p2}, '
+                    self.imported_components.append(p2)
+                else:
+                    s += f'{arg.value}, '
+                    self.imported_components.append(arg.value)
+            s = s[:-2] + '}'
+            return s
+
+        if type(l) == Expr:
+            # This is likely the case of your specialized `import_()` function...
+            f = l.value.func
+            if f.id == 'import_':
+                kwargs = l.value.keywords
+                if kwargs:
+                    kwargs_dict = {kw.arg: kw.value for kw in kwargs}
+                    _as = kwargs_dict.get('_as')
+                    _from = kwargs_dict.get('_from')
+                    # Ex: import * as serviceWorker from './serviceWorker';
+                    if _as and _from:
+                        s = f"import * as {_as.value} from '{_from.value}'"
+                        self.imported_components.append(_as.value)
+                    elif _from:
+                        if type(_from) == Constant:
+                            if len(l.value.args) > 1:
+                                args = process_multiple_import_args(l.value.args)
+                                s = f"import {args} from '{_from.value}'"
+                            else:
+                                s = f"import {l.value.args[0].value} from '{_from.value}'"
+                                self.imported_components.append(l.value.args[0].value)
+                    else:
+                        print("Hmmmm...")
+                        breakpoint()
+                else:
+                    if len(l.value.args) > 1:
+                        args = process_multiple_import_args(l.value.args)
+                        s = f"import {args} from '{l.value.args[0].value}'"
+                    else:
+                        s = f"import '{l.value.args[0].value}'"
+                        self.imported_components.append(l.value.args[0].value)
+            else:
+                raise Exception("NOT YET IMPLEMENTED [hint: parse_import()]")
+        else:
+            try:
+                names = l.names
+            except:
+                breakpoint()
 
         if type(l) == Import:
             s = f"import {', '.join([process_alias(a) for a in names])}"
 
         if type(l) == ImportFrom:
+            m = l.module
+            m = m.replace('_', '-')
             if len(names) == 1:
-                s = f"import {', '.join([process_alias(a, curly_braces=True, module=l.module) for a in names])} from \"{l.module}\""
+                s = f"import {', '.join([process_alias(a, curly_braces=True, module=l.module) for a in names])} from \"{m}\""
             else:
                 s = f"import {{ {', '.join([process_alias(a, curly_braces=False, dq=False) for a in names])} }} from \"{l.module}\""
 
@@ -45,7 +101,8 @@ class Visitor:
         if self.config.react_app:
             opts.update(e4x=True)
             s = "import React from 'react';\n\n" + self.add_other_imports() + s
-            s = s + '\n\nexport default App;\n\n'
+            if not self.default_export:
+                s = s + '\n\nexport default App;\n\n'
         return beautify(s, opts=opts)
 
     def add_other_imports(self):
@@ -59,7 +116,7 @@ class Visitor:
             if constructor == True and self.config.react_app:
                 s += 'super(props)\n'
             s += self.process_statement(node, cls=cls)
-            #if len(s) > 0: s += '\n'
+            if len(s) > 0: s += '\n'
         return s
 
     def process_left(self, left) -> str:
@@ -253,6 +310,10 @@ class Visitor:
         if function_name == 'PURE_STRING':
             return call.args[0].value
 
+        if function_name == 'export_default':
+            self.default_export = True
+            return f"export default {self.process_arg(call.args[0])}"
+
         if function_name == 'input_':
             call.func.id = 'input'
             function_name = 'input'
@@ -287,16 +348,23 @@ class Visitor:
 
             # Special scenario for the `style` keyword argument...
 
+            style = ''
+
             if content:
                 actual_contents = [kw.value for kw in kwargs if kw.arg == 'content'][0]
-                kwargs_string += ", ".join([f"{kw.arg}={self.process_val(kw.value, style=True if kw.arg=='style' else False)}" for kw in kwargs if not kw.arg == 'content'])
-                return f"<{function_name}{kwargs_string.replace(', ', ' ')}{close1}>{self.process_statement(actual_contents)}{close2}"
+                if 'style' in [kw.arg for kw in kwargs]: style = f" style={{{self.process_val([kw.value for kw in kwargs if kw.arg == 'style'][0], style=True)}}}"
+                kwargs_string += ", ".join([f"{kw.arg}={self.process_val(kw.value, style=True if kw.arg=='style' else False)}" for kw in kwargs if not kw.arg == 'content' and kw.arg != 'style'])
+                if "True" in kwargs_string or '{true}' in kwargs_string: kwargs_string = kwargs_string.replace('="True"', '').replace('={true}', '')
+                kw_string = kwargs_string.replace(', ', ' ')
+                if kw_string.endswith(' '): kw_string = kw_string[:-1]
+                return f"<{function_name}{style}{kw_string}{close1}>{self.process_statement(actual_contents)}{close2}"
             else:
-                kwargs_string += ", ".join([f"{kw.arg}={{{self.process_val(kw.value, style=True if kw.arg=='style' else False)}}}" for kw in kwargs])
-                print("DEBUG KWARGS:", kwargs_string)
-                if "True" in kwargs_string:
-                    kwargs_string = kwargs_string.replace('="True"', '')
-                return f"<{function_name}{kwargs_string.replace(', ', ' ')}{close1}>{args_string}{close2}"
+                kwargs_string += ", ".join([f"{kw.arg}={{{self.process_val(kw.value)}}}" for kw in kwargs if kw.arg != 'style'])
+                if 'style' in [kw.arg for kw in kwargs]: style = f" style={{{self.process_val([kw.value for kw in kwargs if kw.arg == 'style'][0], style=True)}}}"
+                if "True" in kwargs_string or '{true}' in kwargs_string: kwargs_string = kwargs_string.replace('="True"', '').replace('={true}', '')
+                kw_string = kwargs_string.replace(', ', ' ')
+                if kw_string.endswith(' '): kw_string = kw_string[:-1]
+                return f"<{function_name}{style}{kw_string}{close1}>{args_string}{close2}"
         else:
             return f"{function_name}({args_string}{kwargs_string})"
 
@@ -460,7 +528,11 @@ class Visitor:
         ## TODO: Also, multiple assignments in same statement...
         #if self.config.debug: print("ASSIGN")
         targets = ", ".join([self.process_target(t) for t in e.targets]) if not augment else self.process_statement(e.target)
-        new = 'new ' if type(e.value) == Call and not self.is_already_defined(e.value.func.id) else ''
+        if type(e.value) == ast.Call:
+            is_defined = self.is_already_defined(e.value.func.id)
+        else:
+            is_defined = False
+        new = 'new ' if type(e.value) == Call and not is_defined else ''
         if type(e.value) == ast.Call:
             if e.value.func.id == 'ternary':
                 new = ''
@@ -521,7 +593,8 @@ class Visitor:
         e = statement
         e_type = type(e)
         case_switch = {
-            Assign: lambda e: self.process_assign(e),
+            Assign: lambda e: self.process_assign(e) + '\n',
+            AsyncFunctionDef: lambda e: self.process_function(e, cls=cls, _async=True),
             FunctionDef: lambda e: self.process_function(e, cls=cls),
             Expr: lambda e: self.process_statement(e.value),
             Call: lambda e: self.check_call(self.process_call(e)),
@@ -702,23 +775,63 @@ class Visitor:
 
     @pre_hook_wrapper
     @post_hook_wrapper
-    def process_lambda(self, l: ast.Lambda) -> str:
+    def process_lambda(self, l: ast.Lambda, is_event_handler: bool = False) -> str:
+        """
+        Process a lambda expression, with special handling for event handlers.
+
+        Args:
+            l: The lambda AST node
+            is_event_handler: Boolean indicating if this lambda is an event handler
+        """
         args, body = l.args, l.body
         args_string = ', '.join([str(arg.arg) for arg in args.args]) if args.args else ''
         self.direct_parent = ('lambda', None)
-        if type(body) == BinOp:
-            ## SPECIAL CASE FOR LONGER LAMBDAS IN PYTHON ##
+
+        # Process the body
+        if isinstance(body, ast.BinOp):
+            # Special case for longer lambdas in Python
             body_string = self.process_bin_op(body, special_long_lambda_case=True)
+        elif is_event_handler and isinstance(body, ast.Call):
+            # Special case for event handler lambdas with simple function calls
+            func_name = body.func.id if isinstance(body.func, ast.Name) else self.process_statement(body.func)
+            args_list = [self.process_statement(arg) for arg in body.args]
+            body_string = f"{func_name}({', '.join(args_list)})"
         else:
             body_string = self.process_statement(body)
 
-        ## Do we want to differentially render longer (multi statement) bodies from simpler ones?
-        ## TODO: What is the optimal way to determine this in the first place?
-        ## For now, let's force curly braces and a return statement for all Lambdas...
+        # Format the body based on complexity and type
+        if is_event_handler and isinstance(body, ast.Call):
+            # Simple event handler - no extra wrapping needed
+            body_wrapper = body_string
+        elif self.is_complex_body(body) and self.config.wrap_return:
+            # Complex body - use curly braces and return
+            body_wrapper = f"{{ return {self.config.wrap_return[0]}{body_string}{self.config.wrap_return[1]} }}"
+        elif isinstance(body, ast.Dict):
+            # Special case for lambdas that return a dictionary
+            body_wrapper = f"{{ return {body_string} }}"
+        else:
+            # Simple body - no curly braces needed
+            body_wrapper = body_string
 
-        body_string = f"{{ return {self.config.wrap_return[0]}{body_string}{self.config.wrap_return[1]} }}"
+        # Format the complete lambda
+        if len(args.args) == 1:
+            return f"{args_string} => {body_wrapper}"
+        else:
+            return f"({args_string}) => {body_wrapper}"
 
-        return f"{args_string} => {body_string}" if len(args.args) == 1 else f"({args_string}) => {body_string}"
+    def is_complex_body(self, body: ast.AST) -> bool:
+        """
+        Determine if a lambda body is complex enough to need curly braces and return.
+
+        Args:
+            body: The AST node representing the lambda body
+        """
+        # Add cases as needed for your specific requirements
+        return (
+                isinstance(body, (ast.BinOp, ast.IfExp)) or
+                (isinstance(body, ast.Call) and hasattr(body, 'keywords') and body.keywords) or
+                hasattr(body, 'body')  # Check for compound statements
+        )
 
     @pre_hook_wrapper
     @post_hook_wrapper
@@ -743,7 +856,7 @@ class Visitor:
 
     @pre_hook_wrapper
     @post_hook_wrapper
-    def process_function(self, func: ast.FunctionDef, cls: bool = False) -> str:
+    def process_function(self, func: ast.FunctionDef, cls: bool = False, _async: bool = False) -> str:
         self.defined_functions.append(func.name)
 
         n_defaults = len(_defaults := func.args.defaults)
@@ -762,6 +875,16 @@ class Visitor:
         func_prefix = '' if cls or self.direct_parent[0] == 'cls' else 'function '
         self.direct_parent = ('func', func_name)
         body = self.process_body(func.body, constructor=True if func_name == 'constructor' else False)
+
+        if _async:
+            func_prefix = 'async ' + func_prefix
+
+        decorator_list = func.decorator_list
+        if decorator_list:
+            if decorator_list[0].id == 'staticmethod':
+                func_prefix = 'static ' + func_prefix
+            else:
+                raise Exception('new kind of decorator...')
 
         return f"{func_prefix}{func_name} ({arg_string}){returns} {{ {body} }}"
 

@@ -25,3 +25,10 @@ class let:
 def ternary(condition, true_val, false_val):
     return true_val if condition else false_val
 
+
+# import * as serviceWorker from './serviceWorker';
+#import_('*', _as='serviceWorker', _from='./serviceWorker')
+
+def import_(_as: str = None, _from: str = None):
+    ...
+

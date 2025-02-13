@@ -42,3 +42,5 @@ class Code:
 
         self.event_handlers = []
 
+        self.default_export = None
+
