@@ -523,7 +523,11 @@ class Visitor:
         ## TODO: Also, multiple assignments in same statement...
         #if self.config.debug: print("ASSIGN")
         targets = ", ".join([self.process_target(t) for t in e.targets]) if not augment else self.process_statement(e.target)
-        new = 'new ' if type(e.value) == Call and not self.is_already_defined(e.value.func.id) else ''
+        if type(e.value) == ast.Call:
+            is_defined = self.is_already_defined(e.value.func.id)
+        else:
+            is_defined = False
+        new = 'new ' if type(e.value) == Call and not is_defined else ''
         if type(e.value) == ast.Call:
             if e.value.func.id == 'ternary':
                 new = ''
