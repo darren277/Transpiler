@@ -9,6 +9,8 @@ from jsbeautifier import beautify
 
 class Visitor:
     def parse_import(self, line: str):
+        # TODO: Definitely tidy this whole thing up a bit when you get the chance...
+
         def convert_to_ast(line):
             return ast.parse(line).body[0]
 
@@ -22,14 +24,63 @@ class Visitor:
                 if a.asname: return f'{a.name} as "{a.asname}"'
             return f'{L}{a.name}{R}'
 
-        names = l.names
+        def process_multiple_import_args(args):
+            s = '{'
+            for arg in args:
+                if ' as ' in arg.value:
+                    p1, p2 = arg.value.split(' as ')
+                    s += f'{p1} as {p2}, '
+                    self.imported_components.append(p2)
+                else:
+                    s += f'{arg.value}, '
+                    self.imported_components.append(arg.value)
+            s = s[:-2] + '}'
+            return s
+
+        if type(l) == Expr:
+            # This is likely the case of your specialized `import_()` function...
+            f = l.value.func
+            if f.id == 'import_':
+                kwargs = l.value.keywords
+                if kwargs:
+                    kwargs_dict = {kw.arg: kw.value for kw in kwargs}
+                    _as = kwargs_dict.get('_as')
+                    _from = kwargs_dict.get('_from')
+                    # Ex: import * as serviceWorker from './serviceWorker';
+                    if _as and _from:
+                        s = f"import * as {_as.value} from '{_from.value}'"
+                    elif _from:
+                        if type(_from) == Constant:
+                            if len(l.value.args) > 1:
+                                args = process_multiple_import_args(l.value.args)
+                                s = f"import {args} from '{_from.value}'"
+                            else:
+                                s = f"import {l.value.args[0].value} from '{_from.value}'"
+                    else:
+                        print("Hmmmm...")
+                        breakpoint()
+                else:
+                    if len(l.value.args) > 1:
+                        args = process_multiple_import_args(l.value.args)
+                        s = f"import {args} from '{l.value.args[0].value}'"
+                    else:
+                        s = f"import '{l.value.args[0].value}'"
+            else:
+                raise Exception("NOT YET IMPLEMENTED [hint: parse_import()]")
+        else:
+            try:
+                names = l.names
+            except:
+                breakpoint()
 
         if type(l) == Import:
             s = f"import {', '.join([process_alias(a) for a in names])}"
 
         if type(l) == ImportFrom:
+            m = l.module
+            m = m.replace('_', '-')
             if len(names) == 1:
-                s = f"import {', '.join([process_alias(a, curly_braces=True, module=l.module) for a in names])} from \"{l.module}\""
+                s = f"import {', '.join([process_alias(a, curly_braces=True, module=l.module) for a in names])} from \"{m}\""
             else:
                 s = f"import {{ {', '.join([process_alias(a, curly_braces=False, dq=False) for a in names])} }} from \"{l.module}\""
 
@@ -45,7 +96,8 @@ class Visitor:
         if self.config.react_app:
             opts.update(e4x=True)
             s = "import React from 'react';\n\n" + self.add_other_imports() + s
-            s = s + '\n\nexport default App;\n\n'
+            if not self.default_export:
+                s = s + '\n\nexport default App;\n\n'
         return beautify(s, opts=opts)
 
     def add_other_imports(self):
