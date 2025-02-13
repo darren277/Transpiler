@@ -589,6 +589,7 @@ class Visitor:
         e_type = type(e)
         case_switch = {
             Assign: lambda e: self.process_assign(e) + '\n',
+            AsyncFunctionDef: lambda e: self.process_function(e, cls=cls, _async=True),
             FunctionDef: lambda e: self.process_function(e, cls=cls),
             Expr: lambda e: self.process_statement(e.value),
             Call: lambda e: self.check_call(self.process_call(e)),
@@ -850,7 +851,7 @@ class Visitor:
 
     @pre_hook_wrapper
     @post_hook_wrapper
-    def process_function(self, func: ast.FunctionDef, cls: bool = False) -> str:
+    def process_function(self, func: ast.FunctionDef, cls: bool = False, _async: bool = False) -> str:
         self.defined_functions.append(func.name)
 
         n_defaults = len(_defaults := func.args.defaults)
@@ -869,6 +870,9 @@ class Visitor:
         func_prefix = '' if cls or self.direct_parent[0] == 'cls' else 'function '
         self.direct_parent = ('func', func_name)
         body = self.process_body(func.body, constructor=True if func_name == 'constructor' else False)
+
+        if _async:
+            func_prefix = 'async ' + func_prefix
 
         return f"{func_prefix}{func_name} ({arg_string}){returns} {{ {body} }}"
 
