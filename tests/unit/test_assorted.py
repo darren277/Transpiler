@@ -530,6 +530,26 @@ def test_assign():
     expected = 'let [users, addUser, editUser, deleteUser] = useUsers()'
     assert result == expected
 
+    # let [users, addUser, editUser, deleteUser] = useUsers()
+    # vs...
+    # let (users, addUser, editUser, deleteUser) = useUsers()
+
+    e = ast.Assign(targets=[ast.List(elts=[ast.Name(id='users', ctx=ast.Store()), ast.Name(id='addUser', ctx=ast.Store()), ast.Name(id='editUser', ctx=ast.Store()), ast.Name(id='deleteUser', ctx=ast.Store())], ctx=ast.Load())], value=ast.Call(func=ast.Name(id='useUsers', ctx=ast.Load()), args=[], keywords=[]))
+    result = main.process_assign(e)
+    expected = 'let [users, addUser, editUser, deleteUser] = useUsers()'
+    assert result == expected
+
+    main.config.tuple_wrapper = '{}'
+
+    targets = [ast.Name(id='users', ctx=ast.Store()), ast.Name(id='addUser', ctx=ast.Store()), ast.Name(id='editUser', ctx=ast.Store()), ast.Name(id='deleteUser', ctx=ast.Store())]
+    tuple_wrapped = [ast.Tuple(elts=targets, ctx=ast.Load())]
+    e = ast.Assign(targets=tuple_wrapped, value=ast.Call(func=ast.Name(id='useUsers', ctx=ast.Load()), args=[], keywords=[]))
+    result = main.process_assign(e)
+    expected = 'let {users, addUser, editUser, deleteUser} = useUsers()'
+    assert result == expected
+
+    main.config.tuple_wrapper = '[]'
+
 
 def test_assert():
     from main import Main
