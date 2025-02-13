@@ -67,6 +67,8 @@ def transpile_file(root_path: str, file_path: str):
     if not os.path.exists(subdir):
         os.makedirs(subdir)
 
+    if 'index.jsx' in actual_file_path:
+        actual_file_path = actual_file_path.replace('index.jsx', 'index.js')
     with open(f'tests/testout/multifile/src{actual_file_path}', 'w') as f:
         print("ABOUT TO WRITE:", f'tests/testout/multifile/src{actual_file_path}')
         f.write(s)
