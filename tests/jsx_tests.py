@@ -54,6 +54,7 @@ def transpile_file(root_path: str, file_path: str):
     js = Main(open(file_path, 'r').read())
     js.config.react_app = True
     js.config.wrap_return = "()"
+    js.config.tuple_wrapper = "{}"
 
     js.register_event_handler('handleEditClick')
     js.register_event_handler('deleteUser')
