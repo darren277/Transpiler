@@ -305,6 +305,10 @@ class Visitor:
         if function_name == 'PURE_STRING':
             return call.args[0].value
 
+        if function_name == 'export_default':
+            self.default_export = True
+            return f"export default {self.process_arg(call.args[0])}"
+
         if function_name == 'input_':
             call.func.id = 'input'
             function_name = 'input'
