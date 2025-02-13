@@ -874,6 +874,13 @@ class Visitor:
         if _async:
             func_prefix = 'async ' + func_prefix
 
+        decorator_list = func.decorator_list
+        if decorator_list:
+            if decorator_list[0].id == 'staticmethod':
+                func_prefix = 'static ' + func_prefix
+            else:
+                raise Exception('new kind of decorator...')
+
         return f"{func_prefix}{func_name} ({arg_string}){returns} {{ {body} }}"
 
     @pre_hook_wrapper
