@@ -213,7 +213,7 @@ def test_cls():
 
     cls = ast.ClassDef(name='MyClass', bases=[ast.Attribute(value=ast.Name(id='MyBase', ctx=ast.Load()), attr='log', ctx=ast.Load())], keywords=[], body=[ast.FunctionDef(name='__init__', args=ast.arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[]), body=[], decorator_list=[])])
     result = main.process_cls(cls)
-    expected = 'class MyClass extends MyBase.log {constructor () {  }}'
+    expected = 'class MyClass extends MyBase.log {constructor () {  }\n}'
     assert result == expected
 
 
@@ -423,24 +423,24 @@ def test_for_loop():
     import ast
     f = ast.For(target=ast.Name(id='x', ctx=ast.Store()), iter=ast.Call(func=ast.Name(id='range', ctx=ast.Load()), args=[ast.Constant(value=10)], keywords=[]), body=[ast.Expr(value=ast.Call(func=ast.Name(id='console.log', ctx=ast.Load()), args=[ast.Name(id='x', ctx=ast.Load())], keywords=[]))], orelse=[])
     result = main.process_for_loop(f)
-    expected = 'for (let x = 0; x < 10; x++) {console.log(x)} '
+    expected = 'for (let x = 0; x < 10; x++) {console.log(x)\n} '
     assert result == expected
 
     f = ast.For(target=ast.Name(id='x', ctx=ast.Store()), iter=ast.Call(func=ast.Name(id='range', ctx=ast.Load()), args=[ast.Constant(value=10), ast.Constant(value=20)], keywords=[]), body=[ast.Expr(value=ast.Call(func=ast.Name(id='console.log', ctx=ast.Load()), args=[ast.Name(id='x', ctx=ast.Load())], keywords=[]))], orelse=[])
     result = main.process_for_loop(f)
-    expected = 'for (let x = 20; x < 10; x++) {console.log(x)} '
+    expected = 'for (let x = 20; x < 10; x++) {console.log(x)\n} '
     assert result == expected
 
     f = ast.For(target=ast.Name(id='x', ctx=ast.Store()), iter=ast.Call(func=ast.Name(id='range', ctx=ast.Load()), args=[ast.Constant(value=10), ast.Constant(value=20), ast.Constant(value=2)], keywords=[]), body=[ast.Expr(value=ast.Call(func=ast.Name(id='console.log', ctx=ast.Load()), args=[ast.Name(id='x', ctx=ast.Load())], keywords=[]))], orelse=[])
     result = main.process_for_loop(f)
-    expected = 'for (let x = 20; x < 10; x+=2) {console.log(x)} '
+    expected = 'for (let x = 20; x < 10; x+=2) {console.log(x)\n} '
     assert result == expected
 
 
     # if type(_iter) == Constant or len(_iter.args) == 1:
     f = ast.For(target=ast.Name(id='x', ctx=ast.Store()), iter=ast.Constant(value=10), body=[ast.Expr(value=ast.Call(func=ast.Name(id='console.log', ctx=ast.Load()), args=[ast.Name(id='x', ctx=ast.Load())], keywords=[]))], orelse=[])
     result = main.process_for_loop(f)
-    expected = 'for (let x = 0; x < 10; x++) {console.log(x)} '
+    expected = 'for (let x = 0; x < 10; x++) {console.log(x)\n} '
     assert result == expected
 
     # if type(_iter) != Constant and _iter.func.id != 'range':

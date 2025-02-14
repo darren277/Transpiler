@@ -14,7 +14,7 @@ def test_expr_body():
     body = [ast.Expr(value=ast.Constant(value=1))]
     result = Main('').process_body(body)
     print(result)
-    assert result == "1"
+    assert result == "1\n"
 
 
 def test_class_body():

@@ -52,3 +52,11 @@ def Fragment(*args, **kwargs):
 
 class React:
     Fragment = Fragment
+
+# TODO:
+#def useState(initialValue): return [initialValue, lambda x: x]
+#def useEffect(func, arr): return func()
+#class Console:
+#    def log(self, err): ...
+#console = Console()
+#email = 'email'

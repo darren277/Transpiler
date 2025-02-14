@@ -35,7 +35,8 @@ def test_functiondef_statement():
         args=ast.arguments(args=[], posonlyargs=[], kwonlyargs=[], kw_defaults=[], defaults=[]),
         #body=[ast.Expr(value=ast.Constant(value=1))],
         # return None
-        body=[ast.Return(value=ast.Constant(value=1))]
+        body=[ast.Return(value=ast.Constant(value=1))],
+        decorator_list=[]
     )
     main = Main('')
 
@@ -192,7 +193,8 @@ classdef = ast.ClassDef(
                 attr='x'
             )],
             value=ast.Constant(value=1)
-        )]
+        )],
+        decorator_list=[]
     )]
 )
 
@@ -201,7 +203,7 @@ def test_classdef_statement():
     parser.config.react_app = False
     result = parser.process_statement(classdef)
     print(result)
-    expected = "class Test {\n    constructor () {\n        this.x = 1\n    }\n}"
+    expected = "class Test {\n    constructor () {\n        this.x = 1\n\n    }\n}"
     assert_beautified(result, expected)
 
 
@@ -210,7 +212,7 @@ def test_classdef_statement_react():
     parser.config.react_app = True
     result = parser.process_statement(classdef)
     print(result)
-    expected = "class Test {\n    constructor (props) {\n        super(props)\n        this.x = 1\n    }\n}"
+    expected = "class Test {\n    constructor (props) {\n        super(props)\n        this.x = 1\n\n    }\n}"
     assert_beautified(result, expected)
 
 
@@ -314,7 +316,7 @@ def test_try_statement():
     )
     result = Main('').process_statement(try_)
     print(result)
-    expected = "try {\n    1\n} catch (e) {\n    2\n}"
+    expected = "try {\n    1\n} catch (e) {\n    2\n\n}"
     assert_beautified(result, expected)
 
 
