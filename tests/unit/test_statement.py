@@ -35,7 +35,8 @@ def test_functiondef_statement():
         args=ast.arguments(args=[], posonlyargs=[], kwonlyargs=[], kw_defaults=[], defaults=[]),
         #body=[ast.Expr(value=ast.Constant(value=1))],
         # return None
-        body=[ast.Return(value=ast.Constant(value=1))]
+        body=[ast.Return(value=ast.Constant(value=1))],
+        decorator_list=[]
     )
     main = Main('')
 
@@ -192,7 +193,8 @@ classdef = ast.ClassDef(
                 attr='x'
             )],
             value=ast.Constant(value=1)
-        )]
+        )],
+        decorator_list=[]
     )]
 )
 
