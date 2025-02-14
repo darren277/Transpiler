@@ -69,8 +69,9 @@ def test_styles():
     main.inside_return = True
 
     result = main.transpile()
-    print('result:', result)
-    assert beautify(result, opts=dict(e4x=True)) == beautify("""import React from 'react';\n\nfunction App() {return (<div style={{"display": "flex", "gap": "10px", "marginBottom": "10px"}}><p>{"Hello"}</p></div>)}\n\nexport default App;""", opts=dict(e4x=True))
+    a = beautify(result, opts=dict(e4x=True))
+    b = beautify("""import React from 'react';\n\nfunction App() {return (<div style={{"display": "flex", "gap": "10px", "marginBottom": "10px"}}><p>{"Hello"}</p></div>)}\n\n\nexport default App;""", opts=dict(e4x=True))
+    assert a == b
 
 
 
