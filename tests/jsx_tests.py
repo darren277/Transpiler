@@ -110,4 +110,11 @@ def multifile_test(path: str):
     #     raise Exception(exception)
     # print(err)
 
-multifile_test('tests/jsx/multifile')
+args = sys.argv[1:]
+
+if (len(args)) == 0:
+    multifile_test('tests/jsx/multifile')
+elif len(args) > 1:
+    raise Exception("Too many arguments.")
+else:
+    multifile_test(args[0])
