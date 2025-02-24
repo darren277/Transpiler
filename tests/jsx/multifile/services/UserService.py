@@ -1,4 +1,5 @@
-from axios import axios
+#from axios import axios
+import_('axios', _from='axios')
 
 NGINX_HOST = process.env.REACT_APP_NGINX_HOST
 NGINX_PORT = process.env.REACT_APP_NGINX_PORT
@@ -24,3 +25,5 @@ class UserService:
     @staticmethod
     async def deleteUser(userId): return axios.delete(USER_API_BASE_URL + '/' + userId)
 
+
+export_default(UserService)

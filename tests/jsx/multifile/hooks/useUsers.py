@@ -1,7 +1,7 @@
 from react import useState
 from react import useEffect
 
-from services.UserService import UserService
+import_('UserService', _from='../services/UserService')
 
 
 def useUsers():
