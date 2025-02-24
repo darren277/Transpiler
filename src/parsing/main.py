@@ -200,8 +200,8 @@ class Visitor:
             #if self.config.debug: print(f"{body.value} IS A NAME... NO RECURSION...")
             v = body.value.id
             s = self.config._self + s if v == 'self' else v + s
-        # if self.config.debug: print("NOW RECURSING...")
-        # DOES THIS CASE EVER OCCUR? s = self.process_attribute(body.value, s) + s
+        else:
+            s = self.process_statement(body.value) + s
         s += "." + last_attr
         return s
 
@@ -568,6 +568,7 @@ class Visitor:
         else:
             assign = self.config.assign
             val = self.process_statement(e.value)
+        #breakpoint()
         if 'this' in targets:
             return f"{targets} {augment_string}= {new}{val}"
         else:

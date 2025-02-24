@@ -731,3 +731,33 @@ def test_special_dict():
     assert result == expected
 
 
+def test_RENAME():
+    # NGINX_HOST = process.env.REACT_APP_NGINX_HOST
+
+    from main import Main
+
+    main = Main('')
+
+    import ast
+
+    main.config.react_app = True
+
+    a = ast.Assign(
+        targets=[
+            ast.Name(id='NGINX_HOST', ctx=ast.Store())
+        ],
+        value=ast.Attribute(
+            value=ast.Attribute(
+                value=ast.Name(id='process', ctx=ast.Load()),
+                attr='env',
+                ctx=ast.Load()
+            ),
+            attr='REACT_APP_NGINX_HOST',
+            ctx=ast.Load()
+        )
+    )
+
+    result = main.process_assign(a)
+    expected = 'let NGINX_HOST = process.env.REACT_APP_NGINX_HOST'
+    assert result == expected
+
