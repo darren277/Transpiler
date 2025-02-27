@@ -77,18 +77,57 @@ class NamedCallVisitor:
             return f"{function_name}({args_string}{kwargs_string})"
 
     def _process_named_call_args(self, function_name: str, args: list) -> tuple:
-        if type(args[0]) == Call:
+        """
+        Processes arguments for a named function call, handling special cases for React components.
+
+        Args:
+            function_name: Name of the function being called
+            args: List of arguments to process
+
+        Returns:
+            tuple: (first_arg_id, processed_args_string)
+        """
+        # Extract ID of the first argument if it's a Call
+        first_arg_id = None
+        if args and isinstance(args[0], Call):
             try:
-                first_arg_id = args[0].func.value.id if type(args[0].func) == Attribute else args[0].func.id
-            except:
+                if isinstance(args[0].func, Attribute):
+                    first_arg_id = args[0].func.value.id
+                else:
+                    first_arg_id = args[0].func.id
+            except AttributeError:
+                # Handle case when ID cannot be extracted
                 first_arg_id = None
-        sep, wrap_string = ("", True) if (self.inside_return or self.direct_parent[1] == 'render') and self.is_react_component(function_name) else (", ", False)
 
-        # In case you want to do the <></> syntax for React fragments...
+        # Determine formatting based on context
+        is_jsx_context = (self.inside_return or self.direct_parent[1] == 'render')
+        is_react_component = self.is_react_component(function_name)
+
+        if is_jsx_context and is_react_component:
+            # JSX mode - no separators between children
+            separator = ""
+            wrap_string = True
+        else:
+            # Normal function call mode - comma-separated args
+            separator = ", "
+            wrap_string = False
+
+        # Special case: React Fragment shorthand
         if function_name == 'Fragment':
-            return f"<>{''.join([self.process_arg(arg, wrap_string=wrap_string) for arg in args])}</>"
+            processed_args = [self.process_arg(arg, wrap_string=wrap_string) for arg in args]
+            return first_arg_id, f"<>{''.join(processed_args)}</>"
 
-        args_string = sep.join([self.process_arg(arg, wrap_string=wrap_string) for arg in args[1:]]) if first_arg_id == 'dict' else sep.join([self.process_arg(arg, wrap_string=wrap_string) for arg in args])
+        # Process arguments based on first argument type
+        if first_arg_id == 'dict':
+            # Skip the first argument (dict) when processing
+            args_to_process = args[1:]
+        else:
+            # Process all arguments
+            args_to_process = args
+
+        # Generate the processed arguments string
+        processed_args = [self.process_arg(arg, wrap_string=wrap_string) for arg in args_to_process]
+        args_string = separator.join(processed_args)
 
         return first_arg_id, args_string
 
