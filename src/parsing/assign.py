@@ -20,6 +20,11 @@ augment_op_dict = {
 }
 
 class AssignVisitor:
+    # TODO: Handle reassignment to already declared consts/vars... #
+    ## Note that this may involve some kind of DIY stack trace implementation to keep track of local variables... ##
+    # TODO: Proper handling of semicolons at the end of statements... #
+
+    ## TODO: Also, multiple assignments in same statement...
     def _process_assign(self, e, augment = False) -> str:
         augment_string = ""
         if augment:
@@ -29,15 +34,7 @@ class AssignVisitor:
                 # This *could* potentially lead to some very strange, albeit very rare, edge cases.
                 return f"{e.target.id} = Math.floor({e.target.id} / {self.process_statement(e.value)})"
             augment_string = augment_op_dict.get(op_type, lambda e: self.throw(f"NOT YET IMPLEMENTED: {op_type}"))(e.op)
-        #print("CURRENT CODE CONTEXT")
-        #print(self.current_code_context)
-        #if 'my_special_var' in self.current_code_context: breakpoint()
-        # TODO: Handle reassignment to already declared consts/vars... #
-        ## Note that this may involve some kind of DIY stack trace implementation to keep track of local variables... ##
-        # TODO: Proper handling of semicolons at the end of statements... #
 
-        ## TODO: Also, multiple assignments in same statement...
-        #if self.config.debug: print("ASSIGN")
         targets = ", ".join([self.process_target(t) for t in e.targets]) if not augment else self.process_statement(e.target)
         if type(e.value) == ast.Call:
             is_defined = self.is_already_defined(e.value.func.id)
