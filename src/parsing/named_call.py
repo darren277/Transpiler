@@ -82,29 +82,31 @@ class NamedCallVisitor:
             kwargs_string += ', '
 
         if self.inside_return and self.is_react_component(function_name):
-            # HTML TAG CASE or IMPORTED REACT COMPONENT CASE
-            close1, close2 = ('/', '') if function_name.lower() in self.imported_components else (
-            '', f'</{function_name}>')
-
-            # Special scenario for the `style` keyword argument...
-
-            style = ''
-
-            if content:
-                actual_contents = [kw.value for kw in kwargs if kw.arg == 'content'][0]
-                if 'style' in [kw.arg for kw in kwargs]: style = f" style={{{self.process_val([kw.value for kw in kwargs if kw.arg == 'style'][0], style=True)}}}"
-                kwargs_string += ", ".join([f"{kw.arg}={self.process_val(kw.value, style=True if kw.arg == 'style' else False)}" for kw in kwargs if not kw.arg == 'content' and kw.arg != 'style'])
-                if "True" in kwargs_string or '{true}' in kwargs_string: kwargs_string = kwargs_string.replace( '="True"', '').replace('={true}', '')
-                kw_string = kwargs_string.replace(', ', ' ')
-                if kw_string.endswith(' '): kw_string = kw_string[:-1]
-                return f"<{function_name}{style}{kw_string}{close1}>{self.process_statement(actual_contents)}{close2}"
-            else:
-                kwargs_string += ", ".join([f"{kw.arg}={{{self.process_val(kw.value)}}}" for kw in kwargs if kw.arg != 'style'])
-                if 'style' in [kw.arg for kw in kwargs]: style = f" style={{{self.process_val([kw.value for kw in kwargs if kw.arg == 'style'][0], style=True)}}}"
-                if "True" in kwargs_string or '{true}' in kwargs_string: kwargs_string = kwargs_string.replace('="True"', '').replace('={true}', '')
-                kw_string = kwargs_string.replace(', ', ' ')
-                if kw_string.endswith(' '): kw_string = kw_string[:-1]
-                return f"<{function_name}{style}{kw_string}{close1}>{args_string}{close2}"
+            return self._render_jsx_component(function_name, args, kwargs)
         else:
             return f"{function_name}({args_string}{kwargs_string})"
+
+    def _render_jsx_component(self, function_name: str, kwargs: list, content, args_string, kwargs_string) -> str:
+        # HTML TAG CASE or IMPORTED REACT COMPONENT CASE
+        close1, close2 = ('/', '') if function_name.lower() in self.imported_components else ('', f'</{function_name}>')
+
+        # Special scenario for the `style` keyword argument...
+
+        style = ''
+
+        if content:
+            actual_contents = [kw.value for kw in kwargs if kw.arg == 'content'][0]
+            if 'style' in [kw.arg for kw in kwargs]: style = f" style={{{self.process_val([kw.value for kw in kwargs if kw.arg == 'style'][0], style=True)}}}"
+            kwargs_string += ", ".join([f"{kw.arg}={self.process_val(kw.value, style=True if kw.arg == 'style' else False)}" for kw in kwargs if not kw.arg == 'content' and kw.arg != 'style'])
+            if "True" in kwargs_string or '{true}' in kwargs_string: kwargs_string = kwargs_string.replace('="True"', '').replace('={true}', '')
+            kw_string = kwargs_string.replace(', ', ' ')
+            if kw_string.endswith(' '): kw_string = kw_string[:-1]
+            return f"<{function_name}{style}{kw_string}{close1}>{self.process_statement(actual_contents)}{close2}"
+        else:
+            kwargs_string += ", ".join([f"{kw.arg}={{{self.process_val(kw.value)}}}" for kw in kwargs if kw.arg != 'style'])
+            if 'style' in [kw.arg for kw in kwargs]: style = f" style={{{self.process_val([kw.value for kw in kwargs if kw.arg == 'style'][0], style=True)}}}"
+            if "True" in kwargs_string or '{true}' in kwargs_string: kwargs_string = kwargs_string.replace('="True"', '').replace('={true}', '')
+            kw_string = kwargs_string.replace(', ', ' ')
+            if kw_string.endswith(' '): kw_string = kw_string[:-1]
+            return f"<{function_name}{style}{kw_string}{close1}>{args_string}{close2}"
 
