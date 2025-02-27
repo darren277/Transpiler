@@ -58,21 +58,11 @@ class NamedCallVisitor:
             function_name = 'input'
 
         args = call.args
-        args_string = ''
-        first_arg_id = None
         if args:
-            if type(args[0]) == Call:
-                try:
-                    first_arg_id = args[0].func.value.id if type(args[0].func) == Attribute else args[0].func.id
-                except:
-                    first_arg_id = None
-            sep, wrap_string = ("", True) if (self.inside_return or self.direct_parent[1] == 'render') and self.is_react_component(function_name) else (", ", False)
+            first_arg_id, args_string = self._process_named_call_args(function_name, args)
+        else:
+            first_arg_id, args_string = None, ''
 
-            # In case you want to do the <></> syntax for React fragments...
-            if function_name == 'Fragment':
-                return f"<>{''.join([self.process_arg(arg, wrap_string=wrap_string) for arg in args])}</>"
-
-            args_string += sep.join([self.process_arg(arg, wrap_string=wrap_string) for arg in args[1:]]) if first_arg_id == 'dict' else sep.join([self.process_arg(arg, wrap_string=wrap_string) for arg in args])
 
         kwargs = call.keywords
         if first_arg_id == 'dict':
@@ -85,6 +75,22 @@ class NamedCallVisitor:
             return self._render_jsx_component(function_name, kwargs, content, args_string, kwargs_string)
         else:
             return f"{function_name}({args_string}{kwargs_string})"
+
+    def _process_named_call_args(self, function_name: str, args: list) -> tuple:
+        if type(args[0]) == Call:
+            try:
+                first_arg_id = args[0].func.value.id if type(args[0].func) == Attribute else args[0].func.id
+            except:
+                first_arg_id = None
+        sep, wrap_string = ("", True) if (self.inside_return or self.direct_parent[1] == 'render') and self.is_react_component(function_name) else (", ", False)
+
+        # In case you want to do the <></> syntax for React fragments...
+        if function_name == 'Fragment':
+            return f"<>{''.join([self.process_arg(arg, wrap_string=wrap_string) for arg in args])}</>"
+
+        args_string = sep.join([self.process_arg(arg, wrap_string=wrap_string) for arg in args[1:]]) if first_arg_id == 'dict' else sep.join([self.process_arg(arg, wrap_string=wrap_string) for arg in args])
+
+        return first_arg_id, args_string
 
     def _render_jsx_component(self, function_name: str, kwargs: list, content, args_string, kwargs_string) -> str:
         """
