@@ -87,26 +87,81 @@ class NamedCallVisitor:
             return f"{function_name}({args_string}{kwargs_string})"
 
     def _render_jsx_component(self, function_name: str, kwargs: list, content, args_string, kwargs_string) -> str:
-        # HTML TAG CASE or IMPORTED REACT COMPONENT CASE
-        close1, close2 = ('/', '') if function_name.lower() in self.imported_components else ('', f'</{function_name}>')
+        """
+        Renders a JSX component with appropriate formatting.
 
-        # Special scenario for the `style` keyword argument...
+        Args:
+            function_name: Name of the component or HTML tag
+            kwargs: List of keyword arguments
+            content: Component content if available
+            args_string: String representation of positional arguments
+            kwargs_string: String representation of keyword arguments
 
-        style = ''
+        Returns:
+            Rendered JSX component as a string
+        """
+        # Determine tag structure based on component type
+        is_imported = function_name.lower() in self.imported_components
+        tag_end = '/' if is_imported else ''
+        closing_tag = '' if is_imported else f'</{function_name}>'
+
+        # Initialize style property
+        style_prop = ''
 
         if content:
-            actual_contents = [kw.value for kw in kwargs if kw.arg == 'content'][0]
-            if 'style' in [kw.arg for kw in kwargs]: style = f" style={{{self.process_val([kw.value for kw in kwargs if kw.arg == 'style'][0], style=True)}}}"
-            kwargs_string += ", ".join([f"{kw.arg}={self.process_val(kw.value, style=True if kw.arg == 'style' else False)}" for kw in kwargs if not kw.arg == 'content' and kw.arg != 'style'])
-            if "True" in kwargs_string or '{true}' in kwargs_string: kwargs_string = kwargs_string.replace('="True"', '').replace('={true}', '')
-            kw_string = kwargs_string.replace(', ', ' ')
-            if kw_string.endswith(' '): kw_string = kw_string[:-1]
-            return f"<{function_name}{style}{kw_string}{close1}>{self.process_statement(actual_contents)}{close2}"
+            # --- WITH CONTENT CASE ---
+
+            # Extract content from kwargs
+            actual_content = [kw.value for kw in kwargs if kw.arg == 'content'][0]
+
+            # Process style if present
+            if 'style' in [kw.arg for kw in kwargs]:
+                style_value = [kw.value for kw in kwargs if kw.arg == 'style'][0]
+                style_prop = f" style={{{self.process_val(style_value, style=True)}}}"
+
+            # Process other props (excluding content and style)
+            other_props = [
+                f"{kw.arg}={self.process_val(kw.value, style=True if kw.arg == 'style' else False)}"
+                for kw in kwargs if kw.arg != 'content' and kw.arg != 'style'
+            ]
+
+            # Add props to kwargs_string
+            if other_props:
+                kwargs_string += ", ".join(other_props)
+
+            # Process content
+            rendered_content = self.process_statement(actual_content)
         else:
-            kwargs_string += ", ".join([f"{kw.arg}={{{self.process_val(kw.value)}}}" for kw in kwargs if kw.arg != 'style'])
-            if 'style' in [kw.arg for kw in kwargs]: style = f" style={{{self.process_val([kw.value for kw in kwargs if kw.arg == 'style'][0], style=True)}}}"
-            if "True" in kwargs_string or '{true}' in kwargs_string: kwargs_string = kwargs_string.replace('="True"', '').replace('={true}', '')
-            kw_string = kwargs_string.replace(', ', ' ')
-            if kw_string.endswith(' '): kw_string = kw_string[:-1]
-            return f"<{function_name}{style}{kw_string}{close1}>{args_string}{close2}"
+            # --- WITHOUT CONTENT CASE ---
+
+            # Process props (excluding style)
+            props = [
+                f"{kw.arg}={{{self.process_val(kw.value)}}}"
+                for kw in kwargs if kw.arg != 'style'
+            ]
+
+            # Add props to kwargs_string
+            if props:
+                kwargs_string += ", ".join(props)
+
+            # Process style if present
+            if 'style' in [kw.arg for kw in kwargs]:
+                style_value = [kw.value for kw in kwargs if kw.arg == 'style'][0]
+                style_prop = f" style={{{self.process_val(style_value, style=True)}}}"
+
+            # Use args_string as content
+            rendered_content = args_string
+
+        # Handle boolean props
+        props_string = kwargs_string
+        if "True" in props_string or '{true}' in props_string:
+            props_string = props_string.replace('="True"', '').replace('={true}', '')
+
+        # Format props spacing for JSX
+        props_string = props_string.replace(', ', ' ')
+        if props_string.endswith(' '):
+            props_string = props_string[:-1]
+
+        # Construct the final component
+        return f"<{function_name}{style_prop}{props_string}{tag_end}>{rendered_content}{closing_tag}"
 
