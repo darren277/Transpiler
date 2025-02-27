@@ -82,7 +82,7 @@ class NamedCallVisitor:
             kwargs_string += ', '
 
         if self.inside_return and self.is_react_component(function_name):
-            return self._render_jsx_component(function_name, args, kwargs)
+            return self._render_jsx_component(function_name, kwargs, content, args_string, kwargs_string)
         else:
             return f"{function_name}({args_string}{kwargs_string})"
 
