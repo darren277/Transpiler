@@ -4,6 +4,20 @@ from ast import *
 
 N = '\n'
 
+augment_op_dict = {
+    ast.Add: lambda e: '+',
+    ast.Sub: lambda e: '-',
+    ast.Mult: lambda e: '*',
+    ast.Div: lambda e: '/',
+    ast.Mod: lambda e: '%',
+    ast.Pow: lambda e: '**',
+    ast.FloorDiv: lambda e: '//',
+    ast.BitAnd: lambda e: '&',
+    ast.BitOr: lambda e: '|',
+    ast.BitXor: lambda e: '^',
+    ast.LShift: lambda e: '<<',
+    ast.RShift: lambda e: '>>'
+}
 
 class AssignVisitor:
     def _process_assign(self, e, augment = False) -> str:
@@ -14,20 +28,6 @@ class AssignVisitor:
                 # Remember that `//` is singe line comment notation in JavaScript, so we'll have to process this expression into a regular floor division (Math.floor()).
                 # This *could* potentially lead to some very strange, albeit very rare, edge cases.
                 return f"{e.target.id} = Math.floor({e.target.id} / {self.process_statement(e.value)})"
-            augment_op_dict = {
-                ast.Add: lambda e: '+',
-                ast.Sub: lambda e: '-',
-                ast.Mult: lambda e: '*',
-                ast.Div: lambda e: '/',
-                ast.Mod: lambda e: '%',
-                ast.Pow: lambda e: '**',
-                ast.FloorDiv: lambda e: '//',
-                ast.BitAnd: lambda e: '&',
-                ast.BitOr: lambda e: '|',
-                ast.BitXor: lambda e: '^',
-                ast.LShift: lambda e: '<<',
-                ast.RShift: lambda e: '>>'
-            }
             augment_string = augment_op_dict.get(op_type, lambda e: self.throw(f"NOT YET IMPLEMENTED: {op_type}"))(e.op)
         #print("CURRENT CODE CONTEXT")
         #print(self.current_code_context)
