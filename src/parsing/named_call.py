@@ -1,80 +1,174 @@
 """"""
 import ast
 from ast import *
+from typing import Optional
 
 N = '\n'
 
 
 class NamedCallVisitor:
     def _process_named_call(self, call: ast.Call) -> str:
-        # FOR DEBUG PURPOSE, PRINT CONTENT OF PYTHON CODE AS A STRING...
-        if self.config.debug:
-            print("---------- START OF FUNCTION CALL ----------")
-            if type(call.func) == ast.Name:
-                print(call.func.id, call.args)
-            elif type(call.func) == ast.Attribute:
-                print(call.func.value, call.func.attr, call.args)
-            print(self.current_code_context)
-            print("---------- END OF FUNCTION CALL ----------")
-        ## TODO: REFACTOR THIS... ##
+        """
+        Process a named function call, handling special cases and JSX components.
+
+        Args:
+            call: AST Call node to process
+
+        Returns:
+            str: Processed function call as a string
+        """
+        # Debug logging if enabled
+        self._debug_log_function_call(call)
+
+        # Handle recursive function calls
+        if isinstance(call.func, Call):
+            processed_args = ", ".join([self.process_arg(arg) for arg in call.args])
+            return f"{self.process_call(call.func).rstrip()}({processed_args})"
+
+        # Extract function name
+        function_name = self._extract_function_name(call)
+
+        # Handle special function cases
+        special_result = self._handle_special_function(function_name, call)
+        if special_result is not None:
+            return special_result
+
+        # Process arguments and keywords
         content = False
-        if type(call.func) == Call:
-            args = N.join([self.process_arg(arg) for arg in call.args])
-            return f"{self.process_call(call.func).rstrip()}({args})"
-        else:
-            try:
-                function_name = call.func.id
-            except:
-                function_name = call.func.attr
-        if function_name == 'dict':
-            print("DICT CASE!!")
-            try:
-                print("KEYWORDS:", call.keywords[0].arg, call.keywords[0].value)
-                raise Exception("This should be handled elsewhere for traditional assignments of dict() but this could occur in an edge case to be resolved later.")
-            except IndexError:
-                raise Exception("EMPTY DICT???")
-
-        if function_name == 'super':
-            return f"super({', '.join([self.process_arg(arg) for arg in call.args])})"
-
-        if function_name == 'ternary':
-            return self.process_ternary(*call.args)
-
-        if function_name == 'type':
-            return f'typeof {self.process_arg(call.args[0])}'
-
-        if function_name == 'print':
-            return f"console.log({', '.join([self.process_arg(arg) for arg in call.args])})"
-
-        if function_name == 'PURE_STRING':
-            return call.args[0].value
-
-        if function_name == 'export_default':
-            self.default_export = True
-            return f"export default {self.process_arg(call.args[0])}"
-
-        if function_name == 'input_':
-            call.func.id = 'input'
-            function_name = 'input'
-
         args = call.args
+        kwargs = call.keywords
+
+        # Process argument list
         if args:
             first_arg_id, args_string = self._process_named_call_args(function_name, args)
+
+            # Handle dict case
+            if first_arg_id == 'dict':
+                kwargs.extend(args[0].keywords)
         else:
             first_arg_id, args_string = None, ''
 
-
-        kwargs = call.keywords
-        if first_arg_id == 'dict':
-            kwargs.extend(args[0].keywords)
+        # Format kwargs string
         kwargs_string = ''
-        if kwargs and not [kw.arg for kw in kwargs if kw.arg == 'content']:
+        if kwargs and not any(kw.arg == 'content' for kw in kwargs):
             kwargs_string += ', '
 
+        # Render JSX or regular function call
         if self.inside_return and self.is_react_component(function_name):
             return self._render_jsx_component(function_name, kwargs, content, args_string, kwargs_string)
         else:
             return f"{function_name}({args_string}{kwargs_string})"
+
+    def _debug_log_function_call(self, call: ast.Call) -> None:
+        """
+        Log function call details for debugging if debug mode is enabled.
+
+        Args:
+            call: AST Call node to log
+        """
+        if not self.config.debug:
+            return
+
+        print("---------- START OF FUNCTION CALL ----------")
+        if isinstance(call.func, ast.Name):
+            print(call.func.id, call.args)
+        elif isinstance(call.func, ast.Attribute):
+            print(call.func.value, call.func.attr, call.args)
+        print(self.current_code_context)
+        print("---------- END OF FUNCTION CALL ----------")
+
+    def _extract_function_name(self, call: ast.Call) -> str:
+        """
+        Extract the function name from a Call node.
+
+        Args:
+            call: AST Call node
+
+        Returns:
+            str: Function name
+        """
+        try:
+            if isinstance(call.func, ast.Name):
+                return call.func.id
+            elif isinstance(call.func, ast.Attribute):
+                return call.func.attr
+            else:
+                return "unknown_function"  # Fallback for unexpected types
+        except AttributeError:
+            return "unknown_function"
+
+    def _handle_special_function(self, function_name: str, call: ast.Call) -> Optional[str]:
+        """
+        Handle special function cases with custom processing.
+
+        Args:
+            function_name: Name of the function
+            call: AST Call node
+
+        Returns:
+            Optional[str]: Processed string if special case, None otherwise
+        """
+        # Dictionary of special function handlers
+        handlers = {
+            'dict': self._handle_dict_function,
+            'super': self._handle_super_function,
+            'ternary': self._handle_ternary_function,
+            'type': self._handle_type_function,
+            'print': self._handle_print_function,
+            'PURE_STRING': self._handle_pure_string_function,
+            'export_default': self._handle_export_default_function,
+            'input_': self._handle_input_function
+        }
+
+        # Call the handler if function_name is in the handlers dictionary
+        handler = handlers.get(function_name)
+        if handler:
+            return handler(call)
+
+        return None
+
+    def _handle_dict_function(self, call: ast.Call) -> str:
+        """Handle the dict() function call."""
+        print("DICT CASE!!")
+        try:
+            print("KEYWORDS:", call.keywords[0].arg, call.keywords[0].value)
+            raise Exception(
+                "This should be handled elsewhere for traditional assignments of dict() but this could occur in an edge case to be resolved later.")
+        except IndexError:
+            raise Exception("EMPTY DICT???")
+
+    def _handle_super_function(self, call: ast.Call) -> str:
+        """Handle the super() function call."""
+        args_str = ', '.join([self.process_arg(arg) for arg in call.args])
+        return f"super({args_str})"
+
+    def _handle_ternary_function(self, call: ast.Call) -> str:
+        """Handle the ternary() function call."""
+        return self.process_ternary(*call.args)
+
+    def _handle_type_function(self, call: ast.Call) -> str:
+        """Handle the type() function call."""
+        return f'typeof {self.process_arg(call.args[0])}'
+
+    def _handle_print_function(self, call: ast.Call) -> str:
+        """Handle the print() function call."""
+        args_str = ', '.join([self.process_arg(arg) for arg in call.args])
+        return f"console.log({args_str})"
+
+    def _handle_pure_string_function(self, call: ast.Call) -> str:
+        """Handle the PURE_STRING() function call."""
+        return call.args[0].value
+
+    def _handle_export_default_function(self, call: ast.Call) -> str:
+        """Handle the export_default() function call."""
+        self.default_export = True
+        return f"export default {self.process_arg(call.args[0])}"
+
+    def _handle_input_function(self, call: ast.Call) -> None:
+        """Handle the input_() function call."""
+        call.func.id = 'input'
+        # Return None to continue processing with modified call object
+        return None
 
     def _process_named_call_args(self, function_name: str, args: list) -> tuple:
         """
